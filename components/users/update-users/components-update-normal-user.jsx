@@ -13,9 +13,8 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import Cookies from 'universal-cookie';
 
-const ComponentUpdateNormalUser = ({ userData }) => {
+const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
     const {data:adminData} = useSelector(store => store?.user)
-    const APP_PASSWORD=process.env.NEXT_PUBLIC_APP_PASSWORD
     const [userId, setUserId] = useState('');
     const cookies = new Cookies(null, { path: '/' });
     const [formData, setFormData] = useState(null);
@@ -139,7 +138,7 @@ const ComponentUpdateNormalUser = ({ userData }) => {
               autocorrect: "off"
             }
           });
-          if (password === APP_PASSWORD) return true;
+          if (password === appPassword) return true;
           return false;
     }
 

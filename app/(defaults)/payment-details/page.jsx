@@ -7,7 +7,7 @@ async function page({
 }) {
     const access_token = cookies().get('access_token')?.value
     const token=cookies().get('token')?.value
-
+    const APP_PASSWORD = process.env.APP_PASSWORD
     let searchParamsMissing=false;
     if(!searchParams.skip || !searchParams.limit){
         searchParamsMissing=true
@@ -22,7 +22,7 @@ async function page({
     const paymentListData=await getPaymentsList(`/user/api/admin/list-to-approve-payment-details?${queryString}`,access_token,token)
     return (
         <div>
-            <ComponentPaymentDetails paymentDetails={paymentListData}/>
+            <ComponentPaymentDetails paymentDetails={paymentListData} appPassword={APP_PASSWORD}/>
         </div>
     );
 }

@@ -9,8 +9,7 @@ import { useSelector } from "react-redux";
 import { post, updateApproveorDecline } from "@/utils";
 import Cookies from "universal-cookie";
 
-function ComponentPaymentDetails({ paymentDetails }) {
-    const APP_PASSWORD = process.env.NEXT_PUBLIC_APP_PASSWORD
+function ComponentPaymentDetails({ paymentDetails ,appPassword}) {
     const [isLoading, setLoading] = useState(true)
     const [disabled, setDisabled] = useState(false)
     const [initialRecords, setInitialRecords] = useState(paymentDetails?.data || []);
@@ -68,7 +67,7 @@ function ComponentPaymentDetails({ paymentDetails }) {
               autocorrect: "off"
             }
           });
-          if (password === APP_PASSWORD) return true;
+          if (password === appPassword) return true;
           return false;
     }
 

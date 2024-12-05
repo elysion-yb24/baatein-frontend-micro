@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import React, { Fragment, use, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import Select from 'react-select';
 import Asyncselect from 'react-select/async'
 import Swal from 'sweetalert2';
@@ -13,6 +14,8 @@ import withReactContent from 'sweetalert2-react-content';
 import Cookies from 'universal-cookie';
 
 const ComponentUpdateNormalUser = ({ userData }) => {
+    const {data:adminData} = useSelector(store => store?.user)
+    const APP_PASSWORD=process.env.NEXT_PUBLIC_APP_PASSWORD
     const [userId, setUserId] = useState('');
     const cookies = new Cookies(null, { path: '/' });
     const [formData, setFormData] = useState(null);
@@ -38,7 +41,24 @@ const ComponentUpdateNormalUser = ({ userData }) => {
     const handleConfirmUpdate = async () => {
         try {
             setModal1(false);
-            console.log('handle confirm update clicked')
+
+            if(adminData?.permissions?.updatePaymentDetails){
+                let validate=await validatePassword();
+                if(!validate) throw new Error('Password is incorrect');
+            }
+            
+            if(!adminData) {
+                cookies.remove('access_token');
+                cookies.remove('token');
+                MySwal.fire({
+                    title: 'Please Login in Again',
+                    text: err,
+                    icon: 'error',
+                    confirmButtonText: 'Ok',
+                })
+                replace('/auth/login');
+                return;
+            }
             
             if (formData.get('isVideoCallAllowed') === 'on') formData.set('isVideoCallAllowed', true)
             if (formData.get('isVideoCallAllowedAdmin') === 'on') formData.set('isVideoCallAllowedAdmin', true)
@@ -75,7 +95,15 @@ const ComponentUpdateNormalUser = ({ userData }) => {
                 });
             }
         } catch (err) {
-            console.log('Err in handleConfirmUpdate', err)
+            // console.log('Err in handleConfirmUpdate', err)
+            MySwal.fire({
+                title: 'Error',
+                text: err,
+                icon: 'error',
+                confirmButtonText: 'Ok',
+            })
+        }finally{
+            refresh();
         }
     }
 
@@ -98,6 +126,23 @@ const ComponentUpdateNormalUser = ({ userData }) => {
         e.preventDefault();
         handleQuery({ userId })
     }
+
+    const validatePassword = async () => {
+        const { value: password } = await Swal.fire({
+            title: "Enter your password",
+            input: "password",
+            inputLabel: "Password",
+            inputPlaceholder: "Enter your password",
+            inputAttributes: {
+              maxlength: "30",
+              autocapitalize: "off",
+              autocorrect: "off"
+            }
+          });
+          if (password === APP_PASSWORD) return true;
+          return false;
+    }
+
     const promiseOptionsInterests = async () => {
         try {
             const cookies = new Cookies(null, { path: '/' })
@@ -211,6 +256,7 @@ const ComponentUpdateNormalUser = ({ userData }) => {
                             name="userId"
                             className="form-input shadow-[0_0_4px_2px_rgb(31_45_61_/_10%)] bg-white rounded-full h-11 placeholder:tracking-wider ltr:pr-11 rtl:pl-11"
                             onChange={e => setUserId(e.target.value)}
+                            required
                         />
                     </div>
                 </div>
@@ -348,11 +394,12 @@ const ComponentUpdateNormalUser = ({ userData }) => {
                                             id="phone"
                                             type="number"
                                             placeholder="Mobile Number"
-                                            className="form-input bg-gray-100"
+                                            className={`form-input ${adminData?.permissions?.updatePaymentDetails === false && 'bg-gray-100'}`}
                                             name="phone"
                                             required
                                             value={formValues?.phone}
-
+                                            onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            disabled={adminData?.permissions?.updatePaymentDetails === false ? true : false}
                                         />
                                         
                                     </div>
@@ -459,10 +506,12 @@ const ComponentUpdateNormalUser = ({ userData }) => {
                                             id="upiId"
                                             type="text"
                                             placeholder="Upi Id"
-                                            className="form-input"
+                                            className={`form-input ${adminData?.permissions?.updatePaymentDetails === false && 'bg-gray-100'}`}
                                             name="upi"
                                             value={formValues?.upi}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            required={adminData?.permissions?.updatePaymentDetails}
+                                            disabled={adminData?.permissions?.updatePaymentDetails === false ? true : false}
                                         />
                                     </div>
                                     <div className="mt-3 sm:col-span-2">

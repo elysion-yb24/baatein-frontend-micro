@@ -351,3 +351,41 @@ export const managePartnerPermissions=async(endpoint,access_token,body)=>{
         return { data: null, success: false, message: 'Internal Server Error' }
     }
 }
+
+export const post=async(endpoint,access_token,body)=>{
+    try {
+        const apiResponse = await fetch(`${API_URL}${endpoint}`, {
+            method:'POST',
+            credentials: 'include',
+            body: JSON.stringify(body),
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + access_token,
+            },
+        })
+        updateAccessToken(apiResponse)
+        const apiData = await apiResponse.json();
+        return apiData
+    } catch (err) {
+        console.error('Err in '+ endpoint, err)
+        return { data: null, success: false, message: 'Internal Server Error' }
+    }
+}
+
+export const get=async(endpoint,access_token)=>{
+    try {
+        const apiResponse = await fetch(`${API_URL}${endpoint}`, {
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + access_token,
+            },
+        })
+        updateAccessToken(apiResponse)
+        const apiData = await apiResponse.json();
+        return apiData
+    } catch (err) {
+        console.error('Err in ' + endpoint, err)
+        return { data: null, success: false, message: 'Internal Server Error' }
+    }
+}

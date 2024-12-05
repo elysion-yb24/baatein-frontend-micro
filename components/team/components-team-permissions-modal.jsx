@@ -8,12 +8,15 @@ import withReactContent from 'sweetalert2-react-content';
 import {updateTeamMemberPermissions} from '@/utils'
 import Cookies from 'universal-cookie';
 import { useRouter } from 'next/navigation';
+import { addUser } from '@/store/userSlice';
+import { useDispatch } from 'react-redux';
 
 const ComponentTeamPermissionModal = ({ permissions,userId }) => {
     const router=useRouter()
     const cookies=new Cookies(null, { path: '/' });
     const {data:userData}=useSelector(store=>store.user)
     const [updatedPermissions,setUpdatedPermissions]=useState(permissions)
+    const dispatch=useDispatch();
     let permissionArr=[]
     for(let key in permissions){
         permissionArr.push({name:key, value:permissions[key]})
@@ -54,6 +57,7 @@ const ComponentTeamPermissionModal = ({ permissions,userId }) => {
                 showCloseButton: true,
                 background:'green'
             });
+            dispatch(addUser(responseData?.data))
             setModal2(false)
             router.refresh()
         }else{
@@ -67,7 +71,7 @@ const ComponentTeamPermissionModal = ({ permissions,userId }) => {
                 background:'red'
             });
         }
-        console.log("🚀 ~ handlePermissionsForm ~ data:", responseData)
+        // console.log("🚀 ~ handlePermissionsForm ~ data:", responseData)
     }
     const [modal2, setModal2] = useState(false);
     return (

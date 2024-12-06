@@ -30,7 +30,7 @@ function ComponentPaymentDetails({ paymentDetails ,appPassword}) {
         const color = ['primary', 'secondary', 'success', 'danger', 'warning', 'info'];
         role = role.toLowerCase();
         if (role === "completed") return color[2];
-        else if(role === "declined") return color[3];
+        else if(role === "failed") return color[3];
         else if (role === "pending") return color[1];
         else return color[5];
     };
@@ -206,6 +206,13 @@ function ComponentPaymentDetails({ paymentDetails ,appPassword}) {
                                 title: 'Upi',
                                 render: ({ upi }) => <div className="flex items-center gap-2">
                                     <strong className="font-bold">{upi || 'N/A'}</strong>
+                                </div>,
+                            },
+                            {
+                                accessor: 'validationName',
+                                title: 'Validation Name',
+                                render: ({ vpa,account }) => <div className="flex items-center gap-2">
+                                    <strong className="font-bold">{vpa?.vpaName || account?.accountName || 'N/A'}</strong>
                                 </div>,
                             },
                             {

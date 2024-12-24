@@ -60,12 +60,12 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'awsUrl',
                                     title: 'Play Video',
-                                    render: ({ awsUrl }) =>
+                                    render: ({ awsUrl,type}) =>
 
                                         <div className="flex items-center gap-2 justify-center">
                                             {awsUrl?.includes('.m3u8') ? <button className="btn btn-sm btn-primary" onClick={() => {
                                                 dispatch(addVideo(awsUrl));
-                                            }}>Play Video</button> : 'n/a'}
+                                            }}>Play {type}</button> : 'n/a'}
                                         </div>
 
                                 },

@@ -30,6 +30,20 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
     const pathname = usePathname();
     const [formValues, setFormValues] = useState(null)
 
+    const numberInputOnWheelPreventChange = (e) => {
+        // Prevent the input value change
+        e.target.blur()
+    
+        // Prevent the page/container scrolling
+        e.stopPropagation()
+    
+        // Refocus immediately, on the next tick (after the current     
+        // function is done)
+        setTimeout(() => {
+            e.target.focus()
+        }, 0)
+    }
+
     const handleUpdate = async (e) => {
         e.preventDefault();
         let currentFormData = new FormData(e.target)
@@ -324,6 +338,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             name="videoRpm"
                                             value={formValues?.videoRpm}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                     </div>
 
@@ -340,6 +355,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             name="rpm"
                                             value={formValues?.rpm}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                     </div>
                                     <div>
@@ -355,6 +371,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             name="payoutVideoRpm"
                                             value={formValues?.payoutVideoRpm}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                     </div>
                                     <div>
@@ -370,6 +387,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             name="payoutAudioRpm"
                                             value={formValues?.payoutAudioRpm}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                     </div>
                                     <div>
@@ -399,6 +417,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             value={formValues?.phone}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
                                             disabled={adminData?.permissions?.updatePaymentDetails === false ? true : false}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                         
                                     </div>
@@ -412,6 +431,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             name="age"
                                             value={formValues?.age}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
+                                            onWheel={numberInputOnWheelPreventChange}
                                         />
                                     </div>
                                     <div>

@@ -55,6 +55,21 @@ const ComponentPartnerOnboarding = () => {
         },3000)
     }
 
+    const numberInputOnWheelPreventChange = (e) => {
+        // Prevent the input value change
+        e.target.blur()
+    
+        // Prevent the page/container scrolling
+        e.stopPropagation()
+    
+        // Refocus immediately, on the next tick (after the current     
+        // function is done)
+        setTimeout(() => {
+            e.target.focus()
+        }, 0)
+    }
+      
+
     const promiseOptionsInterests = async () => {
         try {
             const cookies = new Cookies(null, { path: '/' })
@@ -128,6 +143,7 @@ const ComponentPartnerOnboarding = () => {
                                     step={"0.01"}
                                     required
                                     name="videoRpm"
+                                    onWheel={numberInputOnWheelPreventChange}
                                 />
                             </div>
 
@@ -142,6 +158,8 @@ const ComponentPartnerOnboarding = () => {
                                     step={"0.01"}
                                     required
                                     name="rpm"
+                                    onWheel={numberInputOnWheelPreventChange}
+
                                 />
                             </div>
                             <div>
@@ -155,6 +173,8 @@ const ComponentPartnerOnboarding = () => {
                                     step={"0.01"}
                                     required
                                     name="payoutVideoRpm"
+                                    onWheel={numberInputOnWheelPreventChange}
+
                                 />
                             </div>
                             <div>
@@ -168,6 +188,8 @@ const ComponentPartnerOnboarding = () => {
                                     step={"0.01"}
                                     required
                                     name="payoutAudioRpm"
+                                    onWheel={numberInputOnWheelPreventChange}
+
                                 />
                             </div>
                             <div>
@@ -191,6 +213,8 @@ const ComponentPartnerOnboarding = () => {
                                     className="form-input"
                                     name="phone"
                                     required
+                                    onWheel={numberInputOnWheelPreventChange}
+
                                 />
                             </div>
                             <div>
@@ -201,6 +225,8 @@ const ComponentPartnerOnboarding = () => {
                                     placeholder="Age"
                                     className="form-input"
                                     name="age"
+                                    onWheel={numberInputOnWheelPreventChange}
+
                                 />
                             </div>
                             <div>

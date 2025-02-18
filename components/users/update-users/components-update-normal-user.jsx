@@ -411,12 +411,11 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             id="phone"
                                             type="number"
                                             placeholder="Mobile Number"
-                                            className={`form-input ${adminData?.permissions?.updatePaymentDetails === false && 'bg-gray-100'}`}
+                                            className={`form-input'}`}
                                             name="phone"
                                             required
                                             value={formValues?.phone}
                                             onChange={(e) => setFormValues({ ...formValues, [e.target.name]: e.target.value })}
-                                            disabled={adminData?.permissions?.updatePaymentDetails === false ? true : false}
                                             onWheel={numberInputOnWheelPreventChange}
                                         />
                                         

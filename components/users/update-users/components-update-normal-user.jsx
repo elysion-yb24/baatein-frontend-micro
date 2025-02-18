@@ -411,7 +411,7 @@ const ComponentUpdateNormalUser = ({ userData ,appPassword}) => {
                                             id="phone"
                                             type="number"
                                             placeholder="Mobile Number"
-                                            className={`form-input'}`}
+                                            className={`form-input`}
                                             name="phone"
                                             required
                                             value={formValues?.phone}

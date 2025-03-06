@@ -60,10 +60,10 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'awsUrl',
                                     title: 'Play Video',
-                                    render: ({ awsUrl,type}) =>
+                                    render: ({ awsUrl,type,channelId}) =>
 
                                         <div className="flex items-center gap-2 justify-center">
-                                            {awsUrl?.includes('.m3u8') ? <button className="btn btn-sm btn-primary" onClick={() => {
+                                            {awsUrl?.includes('.m3u8') && channelId%5==0? <button className="btn btn-sm btn-primary" onClick={() => {
                                                 dispatch(addVideo(awsUrl));
                                             }}>Play {type}</button> : 'n/a'}
                                         </div>
@@ -95,6 +95,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                     title: 'Duration',
                                     render: ({ receiverDuration }) => <div className="flex items-center gap-2 justify-center">
                                         <div className="font-semibold text-center">{(receiverDuration / 60)?.toFixed(0) > 0 ? (receiverDuration / 60)?.toFixed(0) : ''} {(receiverDuration / 60).toFixed(0) > 0 && 'mins'} {receiverDuration % 60} secs</div>
+                                        <div>{receiverDuration}</div>
                                     </div>,
                                 },
                                 {

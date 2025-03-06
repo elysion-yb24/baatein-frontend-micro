@@ -23,7 +23,7 @@ async function page({
     const queryString=buildQuery(searchParams)
 
     if(searchParamsMissing){
-        redirect('normal-users?'+queryString)
+        redirect('app-users?'+queryString)
     }
     const normalUsersData=await getNormalUsers(`/user/api/admin/get-users-admin?${queryString}`,access_token,refresh_token)
     // console.log(normalUsersData.data.user,"normalUser");

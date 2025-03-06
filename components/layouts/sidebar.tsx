@@ -91,7 +91,7 @@ const Sidebar = () => {
                     <div className="flex items-center justify-between px-4 py-3">
                         <Link href="/" className="main-logo flex shrink-0 items-center">
                             <img className="ml-[5px] w-8 flex-none" src="/assets/images/logo.svg" alt="logo" />
-                            <span className="align-middle text-2xl font-semibold ltr:ml-1.5 rtl:mr-1.5 dark:text-white-light lg:inline">Elysion Admin</span>
+                            <span className="align-middle text-2xl font-semibold ltr:ml-1.5 rtl:mr-1.5 dark:text-white-light lg:inline">Baaten Admin</span>
                         </Link>
 
                         <button
@@ -569,7 +569,7 @@ const Sidebar = () => {
 
                             <h2 className="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                                 <IconMinus className="hidden h-5 w-4 flex-none" />
-                                <span>{t('user_and_pages')}</span>
+                                <span>{t('users')}</span>
                             </h2>
 
                             <li className="menu nav-item">
@@ -593,7 +593,7 @@ const Sidebar = () => {
                                             <Link href="/users/admin-users">{t('adminUsers')}</Link>
                                         </li>
                                         <li>
-                                            <Link href="/users/normal-users">{t('normalUsers')}</Link>
+                                            <Link href="/users/app-users">{t('appUsers')}</Link>
                                         </li>
                                         <li>
                                             <Link href="/users/update-users">{t('updateUsers')}</Link>
@@ -748,19 +748,19 @@ const Sidebar = () => {
                                 </AnimateHeight>
                             </li> */}
 
-                            <h2 className="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
+                            {/* <h2 className="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                                 <IconMinus className="hidden h-5 w-4 flex-none" />
                                 <span>{t('supports')}</span>
-                            </h2>
+                            </h2> 
 
-                            <li className="menu nav-item">
+                             <li className="menu nav-item">
                                 <Link href="https://vristo.sbthemes.com" target="_blank" className="nav-link group">
                                     <div className="flex items-center">
                                         <IconMenuDocumentation className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('documentation')}</span>
                                     </div>
                                 </Link>
-                            </li>
+                            </li> */}
                         </ul>
                     </PerfectScrollbar>
                 </div>

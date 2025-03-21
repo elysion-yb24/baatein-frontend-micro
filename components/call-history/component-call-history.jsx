@@ -28,7 +28,7 @@ function ComponentCallHistory({ callsData, transactionsData }) {
         channelId: searchParams.get('channelId') || ''
     })
     const videoData = useSelector((state) => state.video.data)
-    const { push, replace } = useRouter();
+    const { push,refresh } = useRouter();
     const pathname = usePathname();
     const handleQuery = (paramsFormData) => {
         try {
@@ -38,6 +38,7 @@ function ComponentCallHistory({ callsData, transactionsData }) {
                 params.set(key, paramsFormData[key])
             }
             push(`${pathname}?${params.toString()}`, { scroll: false })
+            refresh();
             setTimeout(() => {
                 setLoading(false)
             }, 1000)

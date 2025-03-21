@@ -33,7 +33,7 @@ function ComponentReadCalls({ callsData }) {
         skip: Number(searchParams.get('skip')) || 0,
         limit: 10
     })
-    const { push, replace } = useRouter();
+    const { push, refresh } = useRouter();
     const pathname = usePathname();
     const handleQuery = (paramsFormData) => {
         try {
@@ -43,6 +43,7 @@ function ComponentReadCalls({ callsData }) {
                 params.set(key, paramsFormData[key])
             }
             push(`${pathname}?${params.toString()}`, { scroll: false })
+            refresh()
             setTimeout(() => {
                 setLoading(false)
             }, 1000)

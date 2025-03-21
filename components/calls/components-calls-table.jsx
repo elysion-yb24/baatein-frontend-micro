@@ -10,8 +10,12 @@ import Link from "next/link";
 function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData, isLoading, callsData, handleQuery }) {
     // console.log(callsData)
     const dispatch = useDispatch();
-    const { push } = useRouter();
-
+    function convertToIST(utcString) {
+        const utcDate = new Date(utcString);
+        if (isNaN(utcDate.getTime()) || utcDate.getFullYear() === 1970) return 'N/A';
+        return utcDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    }
+    
     useEffect(() => {
         return () => {
             dispatch(removeVideo());
@@ -95,8 +99,28 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                     title: 'Duration',
                                     render: ({ receiverDuration }) => <div className="flex items-center gap-2 justify-center">
                                         <div className="font-semibold text-center">{(receiverDuration / 60)?.toFixed(0) > 0 ? (receiverDuration / 60)?.toFixed(0) : ''} {(receiverDuration / 60).toFixed(0) > 0 && 'mins'} {receiverDuration % 60} secs</div>
-                                        <div>{receiverDuration}</div>
                                     </div>,
+                                },
+                                {
+                                    accessor:'pickedAt',
+                                    title: 'Picked At',
+                                    render:({pickedAt})=>{
+                                        return <div>{convertToIST(pickedAt)}</div>
+                                    }
+                                },
+                                {
+                                    accessor:'endedAt',
+                                    title: 'Ended At',
+                                    render:({endTime,receiverDuration})=>{
+                                        return <div>{receiverDuration?convertToIST(endTime):'N/A'}</div>
+                                    }
+                                },
+                                {
+                                    accessor:'createdAt',
+                                    title: 'Created At',
+                                    render:({createdAt})=>{
+                                        return <div>{convertToIST(createdAt)}</div>
+                                    }
                                 },
                                 {
                                     accessor: 'status',

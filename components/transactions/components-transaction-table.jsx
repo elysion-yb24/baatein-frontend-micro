@@ -16,6 +16,13 @@ function ComponentTransactionsTable({isMounted, initialRecords,formData,setFormD
         else if (role === "failed") return color[3];
         else return color[4];
     };
+
+    function convertToIST(utcString) {
+        const utcDate = new Date(utcString);
+        if (isNaN(utcDate.getTime()) || utcDate.getFullYear() === 1970) return 'N/A';
+        return utcDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    }
+
     return (
         <div className="panel mt-6">
                 <h5 className="mb-5 text-lg font-semibold dark:text-white-light">Transactions Records</h5>
@@ -51,7 +58,7 @@ function ComponentTransactionsTable({isMounted, initialRecords,formData,setFormD
                                     sortable: true,
                                     render: ({ amount }) => (
                                         <div className="flex items-center gap-2">
-                                            <div className={`font-bold ${amount < 0 ? 'text-red-500' : 'text-green-500'}`}>{amount}</div>
+                                            <div className={`font-bold ${amount < 0 ? 'text-red-500' : 'text-green-500'}`}>{amount.toFixed(2)}</div>
                                         </div>
                                     ),
                                 },
@@ -107,7 +114,7 @@ function ComponentTransactionsTable({isMounted, initialRecords,formData,setFormD
                                     accessor: 'createdAt',
                                     title: 'Transaction Time',
                                     render: ({ createdAt }) => <div className="flex items-center justify-center">
-                                        <span className={`font-bold p-2`}>{createdAt}</span>
+                                        <span className={`font-bold p-2`}>{convertToIST(createdAt)}</span>
                                     </div>
                                 }
                             ]}

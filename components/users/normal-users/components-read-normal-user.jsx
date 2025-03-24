@@ -16,6 +16,7 @@ import Swal from 'sweetalert2';
 import IconX from '@/components/icon/icon-x';
 import { managePartnerPermissions } from '@/utils';
 import Cookies from 'universal-cookie';
+import Image from 'next/image';
 
 function ComponentReadNormalUsers({ usersData }) {
     // console.log("usersData", usersData)
@@ -191,7 +192,7 @@ function ComponentReadNormalUsers({ usersData }) {
     ])
 
     useEffect(() => {
-        if (formData.role === 'friend') {
+        if (formData.role !== 'user') {
             setColumn((prevCol) => {
                 if (!prevCol.find((col) => col.accessor === 'videoRpm')) {
                     prevCol.push({
@@ -228,11 +229,34 @@ function ComponentReadNormalUsers({ usersData }) {
                         }
                     })
                 }
+                if (!prevCol.find((col) => col.accessor === 'profile')) {
+                    prevCol.push({
+                        accessor: 'profile',
+                        title: 'Profile',
+                        render: ({avatar}) => {
+                            return <Image className='rounded-md' src={avatar} width={30} height={30}/>
+                        }
+                    })
+                }
                 return prevCol
             }
             )
         }
-    }, [formData])
+
+        if(formData.role === 'user'){
+            setColumn((prevCol) => {
+                prevCol=prevCol.filter((col) => col.accessor !== 'videoRpm');
+    
+                prevCol=prevCol.filter((col) => col.accessor !== 'status')
+    
+                prevCol=prevCol.filter((col) => col.accessor !== 'manage')
+    
+                prevCol=prevCol.filter((col) => col.accessor !== 'profile')
+    
+                return prevCol
+            })
+        }
+    }, [isLoading])
 
     useEffect(() => {
         const data = sortBy(initialRecords, sortStatus.columnAccessor);

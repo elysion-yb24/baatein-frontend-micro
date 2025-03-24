@@ -5,6 +5,15 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    images: {
+        remotePatterns: [
+          {
+            protocol: 'https',
+            hostname: 'baatein.blob.core.windows.net',
+            port: '',
+            pathname: '/**',
+          },
+        ],
+      },
 };
-
 module.exports = nextConfig;

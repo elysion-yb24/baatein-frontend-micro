@@ -74,6 +74,16 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
 
                                 },
                                 {
+                                    accessor: 'callType',
+                                    title: 'Call Type',
+                                    render: ({ type}) =>
+
+                                        <div className="flex items-center gap-2 justify-center">
+                                            {type}
+                                        </div>
+
+                                },
+                                {
                                     accessor: 'channelId',
                                     title: 'Channel Id',
                                     render: ({ channelId }) => <div className="flex items-center gap-2">
@@ -97,9 +107,10 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'receiverDuration',
                                     title: 'Duration',
-                                    render: ({ receiverDuration }) => <div className="flex items-center gap-2 justify-center">
+                                    render: ({ receiverDuration }) => {
+                                        return <div className="flex items-center gap-2 justify-center">
                                         <div className="font-semibold text-center">{(receiverDuration / 60)?.toFixed(0) > 0 ? (receiverDuration / 60)?.toFixed(0) : ''} {(receiverDuration / 60).toFixed(0) > 0 && 'mins'} {receiverDuration % 60} secs</div>
-                                    </div>,
+                                    </div>},
                                 },
                                 {
                                     accessor:'pickedAt',

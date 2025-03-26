@@ -12,6 +12,7 @@ import ComponentCallsTable from '@/components/calls/components-calls-table'
 import VideoPlayer from '@/components/videos/VideoPlayer';
 import { removeVideo } from '@/store/videoSlice';
 import { useDispatch } from 'react-redux';
+import Select from 'react-select';
 
 function ComponentReadCalls({ callsData }) {
     // const [page, setPage] = useState(1);
@@ -31,6 +32,8 @@ function ComponentReadCalls({ callsData }) {
         callerId: searchParams.get('callerId') || '',
         channelId: searchParams.get('channelId') || '',
         skip: Number(searchParams.get('skip')) || 0,
+        isRecorded:searchParams.get('isRecorded') || '',
+        callType:searchParams.get('callType') || '',
         limit: 10
     })
     const { push, refresh } = useRouter();
@@ -52,6 +55,15 @@ function ComponentReadCalls({ callsData }) {
         }
     }
 
+    const callTypeOptions = [
+        {value: '', label:'All'},
+        { value: 'call', label: 'Call' },
+        { value: 'video', label: 'Video' },
+    ];
+    const recordingsOptions = [
+        { value: 'true', label: 'Recordings' },
+        { value: '', label: 'All' },
+    ];
     const handleSubmit = (e) => {
         e.preventDefault();
         const updatedFormData = { ...formData, "skip": 0 }
@@ -74,6 +86,7 @@ function ComponentReadCalls({ callsData }) {
             callerId: searchParams.get('callerId') || '',
             channelId: searchParams.get('channelId') || '',
             skip: Number(searchParams.get('skip')) || 0,
+            callType:searchParams.get('callType') || '',
             limit: 10
         })
     }, [searchParams])
@@ -159,7 +172,33 @@ function ComponentReadCalls({ callsData }) {
                             onChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}
                         />
                     </div>
+
+                     {/* Call Type */}
+                     <div className="relative">
+                        <label>Call Type</label>
+                        <Select
+                            defaultValue={formData.callType}
+                            options={callTypeOptions}
+                            isSearchable={false}
+                            onChange={(e) => setFormData({ ...formData, ["callType"]: e?.value })}
+                            name="callType"
+                            className='z-[15]'
+                        />
+                    </div>
+                     {/* Recorded */}
+                     <div className="relative">
+                        <label>Recordings</label>
+                        <Select
+                            defaultValue={formData.isRecorded}
+                            options={recordingsOptions}
+                            isSearchable={false}
+                            onChange={(e) => setFormData({ ...formData, ["isRecorded"]: e?.value })}
+                            name="isRecorded"
+                            className='z-[10]'
+                        />
+                    </div>
                 </div>
+                   
 
                 <div className='flex justify-center mt-2'>
                     <button className='bg-primary text-white p-2 font-bold rounded-md ' type='submit'>Submit</button>

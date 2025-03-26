@@ -39,6 +39,7 @@ function ComponentReadNormalUsers({ usersData }) {
         numericId: searchParams.get('numericId') || '',
         phone: searchParams.get('phone') || '',
         skip: Number(searchParams.get('skip')) || 0,
+        status:searchParams.get('status') || '',
         limit: 10
     })
     const { push, replace } = useRouter();
@@ -50,6 +51,11 @@ function ComponentReadNormalUsers({ usersData }) {
         {value:'blockedList',label:'Blocked Partners'}
     ];
 
+    const statusOptions = [
+        { value: 'online', label: 'Online' },
+        { value: 'offline', label: 'Offline' },
+        {value:'ogbusy',label:'Busy'}
+    ];
 
     const handleQuery = (paramsFormData) => {
         try {
@@ -156,7 +162,11 @@ function ComponentReadNormalUsers({ usersData }) {
         setIsMounted(true);
     }, []);
 
-
+    useEffect(()=>{
+        if(formData?.role!="friend"){
+            setFormData({...formData,'status':''})
+        }
+    },[formData.role])
 
     const [column, setColumn] = useState([
         {
@@ -334,6 +344,24 @@ function ComponentReadNormalUsers({ usersData }) {
                             onChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })}
                         />
                     </div>
+
+
+                    {/* Status */}
+                    {
+                        formData.role=="friend" &&
+                    
+                        <div className="relative">
+                            <label>Status</label>
+                            <Select
+                                defaultValue={formData.status}
+                                options={statusOptions}
+                                isSearchable={false}
+                                onChange={(e) => setFormData({ ...formData, ["status"]: e?.value })}
+                                name="paymentFor"
+                                className='z-[10]'
+                            />
+                        </div>
+                    }
                 </div>
 
 

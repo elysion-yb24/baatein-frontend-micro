@@ -417,7 +417,7 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 sortable: true,
                                                 render: ({ convertedLeads,convertedLeadSelf,totalCalls }) => {
                                                     return <div className="flex items-center justify-center">
-                                                        <span className={`font-bold p-2`}>{totalCalls  ?  +((convertedLeads + convertedLeadSelf) / totalCalls * 100).toFixed(2) : 0}</span>
+                                                        <span className={`font-bold p-2`}>{totalCalls  ?  ((convertedLeads + convertedLeadSelf) / totalCalls * 100).toFixed(2) : 0}</span>
                                                     </div>
                                                 }
                                             },
@@ -427,7 +427,7 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 sortable: true,
                                                 render: ({ totalMissedCalls,totalCalls }) => {
                                                     return <div className="flex items-center justify-center">
-                                                        <span className={`font-bold p-2`}>{totalCalls?+((totalMissedCalls/totalCalls)*100).toFixed(2):0}</span>
+                                                        <span className={`font-bold p-2`}>{totalCalls?((totalMissedCalls/totalCalls)*100).toFixed(2):0}</span>
 
                                                     </div>
                                                 }

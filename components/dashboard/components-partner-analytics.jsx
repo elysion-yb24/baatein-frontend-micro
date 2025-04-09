@@ -415,10 +415,9 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 accessor: 'conversionPercent',
                                                 title: 'Conversion',
                                                 sortable: true,
-                                                render: ({ conversionPercent }) => {
+                                                render: ({ convertedLeads,convertedLeadSelf,totalCalls }) => {
                                                     return <div className="flex items-center justify-center">
-                                                        <span className={`font-bold p-2`}>{conversionPercent < 0 ? 'N/A' : (conversionPercent + '%')}</span>
-
+                                                        <span className={`font-bold p-2`}>{totalCalls  ?  ((convertedLeads + convertedLeadSelf) / totalCalls * 100).toFixed(2) : 0}</span>
                                                     </div>
                                                 }
                                             },

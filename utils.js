@@ -352,8 +352,9 @@ export const managePartnerPermissions=async(endpoint,access_token,body)=>{
     }
 }
 
-export const post=async(endpoint,access_token,body)=>{
+export const post=async(endpoint,access_token,body,options)=>{
     try {
+        const isBlob = options.blob === true;
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             method:'POST',
             credentials: 'include',
@@ -364,16 +365,16 @@ export const post=async(endpoint,access_token,body)=>{
             },
         })
         updateAccessToken(apiResponse)
-        const apiData = await apiResponse.json();
-        return apiData
+        return isBlob ? await apiResponse.blob() : await apiResponse.json();
     } catch (err) {
         console.error('Err in '+ endpoint, err)
-        return { data: null, success: false, message: 'Internal Server Error' }
+        return isBlob ? null : { data: null, success: false, message: 'Internal Server Error' };
     }
 }
 
-export const get=async(endpoint,access_token)=>{
+export const get=async(endpoint,access_token,options)=>{
     try {
+        const isBlob = options.blob === true;
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
             headers: {
@@ -382,10 +383,9 @@ export const get=async(endpoint,access_token)=>{
             },
         })
         updateAccessToken(apiResponse)
-        const apiData = await apiResponse.json();
-        return apiData
+        return isBlob ? await apiResponse.blob() : await apiResponse.json();
     } catch (err) {
         console.error('Err in ' + endpoint, err)
-        return { data: null, success: false, message: 'Internal Server Error' }
+        return isBlob ? null : { data: null, success: false, message: 'Internal Server Error' };
     }
 }

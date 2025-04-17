@@ -127,6 +127,9 @@ const Sidebar = () => {
                                         <li>
                                             <Link href='/payment-details'>{t('approvePaymentDetails')}</Link>
                                         </li>
+                                        <li>
+                                            <Link href='/payouts'>{t('payout')}</Link>
+                                        </li>
                                         {/* <li>
                                             <Link href="/finance">{t('finance')}</Link>
                                         </li>

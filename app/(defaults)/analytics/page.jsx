@@ -11,7 +11,7 @@ async function page ({
 
     const queryString=buildQuery(searchParams)
     
-    let analyticsData=await getPartnerAnalytics(`/analytics/api/get-analytics?${queryString}`,access_token,refresh_token);
+    let analyticsData=await getPartnerAnalytics(`/analytics/api/admin/get-analytics?${queryString}`,access_token,refresh_token);
     let errorMessage='';
     if(analyticsData?.success===false){
         errorMessage=analyticsData?.message

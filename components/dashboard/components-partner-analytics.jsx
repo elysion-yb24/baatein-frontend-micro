@@ -149,7 +149,6 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
         setInitialRecords(sortStatus.direction === 'desc' ? data.sort(function (a, b) { return b[sortStatus.columnAccessor] - a[sortStatus.columnAccessor] }) : data.sort(function (a, b) { return a[sortStatus.columnAccessor] - b[sortStatus.columnAccessor] }));
     }, [sortStatus]);
 
-    console.log('rendering');
     return (
         <>
             {/* Search Queries */}
@@ -415,9 +414,10 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 accessor: 'conversionPercent',
                                                 title: 'Conversion',
                                                 sortable: true,
-                                                render: ({ convertedLeads,convertedLeadSelf,totalCalls }) => {
+                                                render: ({ conversionPercent }) => {
                                                     return <div className="flex items-center justify-center">
-                                                        <span className={`font-bold p-2`}>{totalCalls  ?  ((convertedLeads + convertedLeadSelf) / totalCalls * 100).toFixed(2) : 0}</span>
+                                                        {/* <span className={`font-bold p-2`}>{totalCalls  ?  ((convertedLeads + convertedLeadSelf) / totalCalls * 100).toFixed(2) : 0}</span> */}
+                                                        <span className={`font-bold p-2`}>{ conversionPercent}</span>
                                                     </div>
                                                 }
                                             },
@@ -425,9 +425,9 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 accessor: 'missedCallsPercent',
                                                 title: 'Missed Calls percent',
                                                 sortable: true,
-                                                render: ({ totalMissedCalls,totalCalls }) => {
+                                                render: ({ missedCallsPercent}) => {
                                                     return <div className="flex items-center justify-center">
-                                                        <span className={`font-bold p-2`}>{totalCalls?((totalMissedCalls/totalCalls)*100).toFixed(2):0}</span>
+                                                        <span className={`font-bold p-2`}>{missedCallsPercent}</span>
 
                                                     </div>
                                                 }
@@ -493,16 +493,16 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 accessor: 'totalRevenueGenerated',
                                                 title: 'Total Revenue ',
                                                 sortable: true,
-                                                render: ({totalCallRevenueGenerated,totalVideoRevenueGenerated }) => <div className="flex items-center justify-center">
-                                                    <span className={`font-bold p-2`}>{((+totalCallRevenueGenerated?.toFixed(2)) + (+totalVideoRevenueGenerated?.toFixed(2))).toFixed(2)}</span>
+                                                render: ({totalRevenueGenerated }) => <div className="flex items-center justify-center">
+                                                    <span className={`font-bold p-2`}>{totalRevenueGenerated}</span>
                                                 </div>
                                             },
                                             {
                                                 accessor: 'totalEarnings',
                                                 title: 'Total Earnings',
                                                 sortable: true,
-                                                render: ({totalVideoEarnings,totalCallEarnings }) => <div className="flex items-center justify-center">
-                                                    <span className={`font-bold p-2`}>{((+totalVideoEarnings?.toFixed(2)) + (+totalCallEarnings?.toFixed(2))).toFixed(2)}</span>
+                                                render: ({totalEarnings }) => <div className="flex items-center justify-center">
+                                                    <span className={`font-bold p-2`}>{totalEarnings}</span>
                                                 </div>
                                             }
                                             // {
@@ -528,6 +528,29 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                     emptyState={errorMessage ? <div>{errorMessage}</div> : <div>No records Found</div>}
                                 />
                             )}
+
+                            <div>
+                                <span className="text-xl font-bold">Total Revenue Generated :</span>
+                                <span className='text-lg'>
+                                    {
+                                        initialRecords.reduce((revenueSum,currentRecord)=>{
+                                            return revenueSum + Number(currentRecord.totalRevenueGenerated)
+                                        },0).toFixed(2)
+                                    }
+                                </span>
+                            </div>
+
+                            <div>
+                                <span className="text-xl font-bold">Partner Earnings :</span>
+                                <span className='text-lg'>
+                                    {
+                                        initialRecords.reduce((earningsSum,currentRecord)=>{
+                                            return earningsSum + Number(currentRecord.totalEarnings)
+                                        },0).toFixed(2)
+                                    }
+                                </span>
+                            </div>
+                            
                         </div>
 
                         {/* For pagination */}

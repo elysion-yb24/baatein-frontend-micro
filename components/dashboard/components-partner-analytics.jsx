@@ -447,7 +447,6 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 title: 'Gifts',
                                                 sortable: true,
                                                 render: ({ totalGifts,giftAmounts }) =>{
-                                                    console.log('git',totalGifts>0 && giftAmounts);
                                                     return (<div className="flex items-center justify-center">
                                                         <span className={`font-bold p-2`}>{totalGifts}</span>
                                                     </div>)
@@ -529,29 +528,89 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                 />
                             )}
 
-                            <div>
-                                <span className="text-xl font-bold">Total Revenue Generated :</span>
-                                <span className='text-lg'>
-                                    {
-                                        initialRecords.reduce((revenueSum,currentRecord)=>{
-                                            return revenueSum + Number(currentRecord.totalRevenueGenerated)
-                                        },0).toFixed(2)
-                                    }
-                                </span>
-                            </div>
 
-                            <div>
-                                <span className="text-xl font-bold">Partner Earnings :</span>
-                                <span className='text-lg'>
-                                    {
-                                        initialRecords.reduce((earningsSum,currentRecord)=>{
-                                            return earningsSum + Number(currentRecord.totalEarnings)
-                                        },0).toFixed(2)
-                                    }
-                                </span>
-                            </div>
                             
                         </div>
+                        
+                        {initialRecords &&
+                            <div className='p-2 flex'>
+                                <div>
+                                    <span className="text-xl font-bold">Total Missed Calls :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((missedCalls,currentRecord)=>{
+                                                return missedCalls + Number(currentRecord.totalMissedCalls)
+                                            },0)
+                                        }
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-xl font-bold">Total Paid Calls :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((paidCalls,currentRecord)=>{
+                                                return paidCalls + Number(currentRecord.totalPaidCalls)
+                                            },0)
+                                        }
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-xl font-bold">Total Free Calls :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((freeCalls,currentRecord)=>{
+                                                return freeCalls + Number(currentRecord.totalFreeCalls)
+                                            },0)
+                                        }
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-xl font-bold">Total Calls :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((totalCalls,currentRecord)=>{
+                                                return totalCalls + Number(currentRecord.totalMissedCalls+currentRecord.totalFreeCalls+currentRecord.totalPaidCalls)
+                                            },0)
+                                        }
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-xl font-bold">Total Gifts :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((totalGifts,currentRecord)=>{
+                                                return totalGifts + Number(currentRecord.totalGifts)
+                                            },0)
+                                        }
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-xl font-bold">Total Revenue Generated :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((revenueSum,currentRecord)=>{
+                                                return revenueSum + Number(currentRecord.totalRevenueGenerated)
+                                            },0).toFixed(2)
+                                        }
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span className="text-xl font-bold">Partner Earnings :</span>
+                                    <span className='text-lg'>
+                                        {
+                                            initialRecords.reduce((earningsSum,currentRecord)=>{
+                                                return earningsSum + Number(currentRecord.totalEarnings)
+                                            },0).toFixed(2)
+                                        }
+                                    </span>
+                                </div>
+
+                                
+
+                                
+                            </div>
+                        }
 
                         {/* For pagination */}
                         <ul className="inline-flex items-center space-x-1 rtl:space-x-reverse m-auto mt-4">

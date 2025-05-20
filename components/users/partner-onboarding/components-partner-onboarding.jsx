@@ -1,5 +1,5 @@
 'use client';
-import { getUserInterests, userOnboardingApi } from '@/utils';
+import { compressImage, getUserInterests, userOnboardingApi } from '@/utils';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import Select from 'react-select';
@@ -24,6 +24,11 @@ const ComponentPartnerOnboarding = () => {
         const formData = new FormData(e.target)
         if (formData.get('isVideoCallAllowed') === 'on') formData.set('isVideoCallAllowed', true)
         if (formData.get('isVideoCallAllowedAdmin') === 'on') formData.set('isVideoCallAllowedAdmin', true)
+        if(formData.get('avatar')){
+            let currentAvatar=formData.get('avatar');
+            let compressedAvatar=await compressImage(currentAvatar);
+            formData.set('avatar',compressedAvatar);
+        }
 
         formData.append('password', "Sarthak1singhal@");
         setDisableSubmit(true);

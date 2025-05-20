@@ -141,9 +141,11 @@ const ComponentPartnerOnboarding = () => {
                                 <label htmlFor="videoRpm">Video Rpm (Required)</label>
                                 <input
                                     id="videoRpm"
+                                    value={29}
+                                    disabled
                                     type="number"
                                     placeholder="Video rate/min"
-                                    className="form-input"
+                                    className="form-input disabled:pointer-events-none disabled:bg-[#eee] dark:disabled:bg-[#1b2e4b] cursor-not-allowed"
                                     min={0}
                                     step={"0.01"}
                                     required
@@ -156,9 +158,11 @@ const ComponentPartnerOnboarding = () => {
                                 <label htmlFor="audioRpm">Audio Rpm (Required)</label>
                                 <input
                                     id="rpm"
+                                    value={6}
+                                    disabled
                                     type="number"
                                     placeholder="Audio rate/min"
-                                    className="form-input"
+                                    className="form-input disabled:pointer-events-none disabled:bg-[#eee] dark:disabled:bg-[#1b2e4b] cursor-not-allowed"
                                     min={0}
                                     step={"0.01"}
                                     required
@@ -172,8 +176,10 @@ const ComponentPartnerOnboarding = () => {
                                 <input
                                     id="payoutVideoRpm"
                                     type="number"
+                                    value={9}
+                                    disabled
                                     placeholder="Payout Video rate/min"
-                                    className="form-input"
+                                    className="form-input disabled:pointer-events-none disabled:bg-[#eee] dark:disabled:bg-[#1b2e4b] cursor-not-allowed"
                                     min={0}
                                     step={"0.01"}
                                     required
@@ -186,9 +192,11 @@ const ComponentPartnerOnboarding = () => {
                                 <label htmlFor="payoutAudioRpm">Payout Audio Rpm (Required)</label>
                                 <input
                                     id="payoutAudioRpm"
+                                    value={2}
+                                    disabled
                                     type="number"
                                     placeholder="Payout Audio rate/min"
-                                    className="form-input"
+                                    className="form-input disabled:pointer-events-none disabled:bg-[#eee] dark:disabled:bg-[#1b2e4b] cursor-not-allowed"
                                     min={0}
                                     step={"0.01"}
                                     required

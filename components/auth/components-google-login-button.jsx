@@ -11,7 +11,7 @@ function GoogleLoginButton() {
     const router=useRouter()
     const googleLogin = useGoogleLogin({
         onSuccess: async tokenResponse => {
-            const apiData = await googleOauthLogin(tokenResponse,'/auth/api/team/create-team-user')
+            const apiData = await googleOauthLogin(tokenResponse,'/api/proxy/auth/api/team/create-team-user')
             if(apiData.success) {
                 // redirect to dashboard
                 // window.location.replace('/');

@@ -133,5 +133,6 @@
     "transactions":"Transactions",
     "updateUsers":"Update Users",
     "approvePaymentDetails":"Approve Payment Details",
-    "payout":"Payout"
+    "payout":"Payout",
+    "reviews":"Reviews"
 }

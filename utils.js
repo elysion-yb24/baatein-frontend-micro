@@ -354,8 +354,8 @@ export const managePartnerPermissions=async(endpoint,access_token,body)=>{
 }
 
 export const post=async(endpoint,access_token,body,options)=>{
+    const isBlob = options && options.blob === true;
     try {
-        const isBlob = options.blob === true;
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             method:'POST',
             credentials: 'include',
@@ -373,13 +373,14 @@ export const post=async(endpoint,access_token,body,options)=>{
     }
 }
 
-export const get=async(endpoint,access_token,options)=>{
+export const get=async(endpoint,access_token,refresh_token,options)=>{
+    const isBlob = options ? options.blob === true : false;
     try {
-        const isBlob = options.blob === true;
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
+                'cookies': refresh_token || '',
                 'Authorization': 'Bearer ' + access_token,
             },
         })
@@ -390,6 +391,7 @@ export const get=async(endpoint,access_token,options)=>{
         return isBlob ? null : { data: null, success: false, message: 'Internal Server Error' };
     }
 }
+
 
 export const compressImage=async(file)=>{
     const options= { 

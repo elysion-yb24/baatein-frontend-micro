@@ -116,10 +116,8 @@ function ComponentAllReviews({reviewsList}) {
                 </form>
 
                 <h5 className="mb-5 text-lg font-semibold dark:text-white-light">Reviews</h5>
-                <div className='flex h-screen'>
+                <div className='flex'>
                     <div className={` ${partnerId ? 'w-1/2' : 'w-full'}`}>
-                        <section>
-
                         <div className="datatables">
                             {isMounted && (
                                 <DataTable
@@ -165,25 +163,25 @@ function ComponentAllReviews({reviewsList}) {
                                     ]}
                                     idAccessor='_id'
                                     fetching={isLoading}
-                                    // sortStatus={sortStatus}
-                                    // onSortStatusChange={setSortStatus}
+                                    sortStatus={sortStatus}
+                                    onSortStatusChange={setSortStatus}
                                     minHeight={200}
                                     emptyState={reviewsList?.success === false ? <div>{reviewsList?.message}</div> : <div>No records Found</div>}
                                 />
                             )}
                         </div>
-                        </section>
                     </div>
 
 
                 { 
                     partnerId && 
                     <div className={`${partnerId ? 'w-1/2 inline' : 'hidden'} sticky border-l-2 px-4`}>
-                       <ComponentShowReview partnerId={partnerId}/>
-                       <button className='btn-danger p-2 my-2 m-auto rounded-md cursor-pointer'
-                            onClick={() =>setPartnerId(null)}>Dismiss
-                        </button>
-                    
+                        <div className='sticky top-20'>
+                            <ComponentShowReview partnerId={partnerId}/>
+                            <button className='btn-danger p-2 my-2 m-auto rounded-md cursor-pointer'
+                                onClick={() =>setPartnerId(null)}>Dismiss
+                            </button>
+                        </div>
                     </div>
                 }
                 </div>

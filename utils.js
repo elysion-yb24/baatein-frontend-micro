@@ -181,7 +181,7 @@ export const googleOauthLogin = async (tokenResponse,endpoint) => {
         });
         const userInfo = await userResponse.json()
         const { email, name, sub, hd } = userInfo
-        const teamResponse = await fetch(`${endpoint}`,{
+        const teamResponse = await fetch(`${API_URL}${endpoint}`,{
             method: "POST",
             credentials: 'include',
             headers: {

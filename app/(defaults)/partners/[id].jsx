@@ -6,6 +6,8 @@ export default function PartnerDetailsPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showPanModal, setShowPanModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false); // NEW STATE
+
   const id = params?.id;
 
   useEffect(() => {
@@ -35,10 +37,13 @@ export default function PartnerDetailsPage({ params }) {
   const bio = partner.bio || "N/A";
   const audioIntro = partner.audioIntro;
   const status = partner.kyc?.status || "Pending";
+  const profilePicture = partner.profilePicture || null;
 
   return (
     <div className="p-8 max-w-2xl mx-auto bg-white rounded shadow">
       <h1 className="text-2xl font-bold mb-6">Partner Details</h1>
+
+      {/* PAN Card */}
       <div className="mb-4">
         <strong>PAN Card Number:</strong> {panNumber}
       </div>
@@ -70,6 +75,38 @@ export default function PartnerDetailsPage({ params }) {
           <span>N/A</span>
         )}
       </div>
+
+      {/* Profile Picture */}
+      <div className="mb-4">
+        <strong>Profile Picture:</strong>{" "}
+        {profilePicture ? (
+          <>
+            <img
+              src={profilePicture}
+              alt="Profile"
+              className="w-24 h-24 rounded-full object-cover border cursor-pointer inline-block"
+              onClick={() => setShowProfileModal(true)}
+            />
+            {showProfileModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                <div className="bg-white p-4 rounded shadow-lg relative">
+                  <button
+                    className="absolute top-2 right-2 text-gray-500 hover:text-black text-2xl"
+                    onClick={() => setShowProfileModal(false)}
+                  >
+                    &times;
+                  </button>
+                  <img src={profilePicture} alt="Profile" className="max-w-full max-h-[70vh] rounded-full" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <span>N/A</span>
+        )}
+      </div>
+
+      {/* Bank */}
       <div className="mb-4">
         <strong>Bank Details:</strong>
         <ul className="ml-4 list-disc">
@@ -80,18 +117,28 @@ export default function PartnerDetailsPage({ params }) {
           ))}
         </ul>
       </div>
+
+      {/* Status */}
       <div className="mb-4">
-        <strong>Status:</strong> <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">{status}</span>
+        <strong>Status:</strong>{" "}
+        <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">
+          {status}
+        </span>
       </div>
+
+      {/* Others */}
       <div className="mb-4">
         <strong>Others:</strong>
         <ul className="ml-4 list-disc">
           <li><strong>Spoken Languages:</strong> {spokenLanguages.length ? spokenLanguages.join(", ") : "N/A"}</li>
           <li><strong>Hobby:</strong> {hobby}</li>
           <li><strong>Bio:</strong> {bio}</li>
-          <li><strong>Audio Intro:</strong> {audioIntro ? <audio controls src={audioIntro} className="inline-block align-middle" /> : "N/A"}</li>
+          <li>
+            <strong>Audio Intro:</strong>{" "}
+            {audioIntro ? <audio controls src={audioIntro} className="inline-block align-middle" /> : "N/A"}
+          </li>
         </ul>
       </div>
     </div>
   );
-} 
+}

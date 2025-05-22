@@ -80,7 +80,7 @@ export default function PartnersPage() {
   };
 
   // Helper to get partner name
-  const getPartnerName = (partner) => partner.name|| "N/A";
+  const getPartnerName = (partner) => partner.name || "N/A";
 
   const handleExpand = (partnerId) => {
     setExpandedPartnerId(expandedPartnerId === partnerId ? null : partnerId);
@@ -164,17 +164,16 @@ export default function PartnersPage() {
       <span className="text-lg text-gray-500">Loading partners...</span>
     </div>
   );
-  
+
   if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-all transform animate-slide-in ${
-          notification.type === "success" ? "bg-green-100 text-green-800 border-l-4 border-green-500" : 
-          "bg-red-100 text-red-800 border-l-4 border-red-500"
-        }`}>
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-all transform animate-slide-in ${notification.type === "success" ? "bg-green-100 text-green-800 border-l-4 border-green-500" :
+            "bg-red-100 text-red-800 border-l-4 border-red-500"
+          }`}>
           <div className={`p-2 rounded-full ${notification.type === "success" ? "bg-green-200" : "bg-red-200"}`}>
             {notification.type === "success" ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +186,7 @@ export default function PartnersPage() {
             )}
           </div>
           <div>{notification.message}</div>
-          <button 
+          <button
             onClick={() => setNotification(null)}
             className="ml-4 text-gray-500 hover:text-gray-700"
           >
@@ -221,8 +220,8 @@ export default function PartnersPage() {
               className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
             />
             {search && (
-              <button 
-                onClick={() => setSearch("")} 
+              <button
+                onClick={() => setSearch("")}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +231,7 @@ export default function PartnersPage() {
             )}
           </div>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={fetchPartners}
               className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
             >
@@ -295,13 +294,12 @@ export default function PartnersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      partner.status === 'Approved' 
-                        ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20' 
-                        : partner.status === 'Rejected' 
-                          ? 'bg-red-100 text-red-800 ring-1 ring-red-600/20' 
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'Approved'
+                        ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
+                        : partner.status === 'Rejected'
+                          ? 'bg-red-100 text-red-800 ring-1 ring-red-600/20'
                           : 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20'
-                    }`}>
+                      }`}>
                       {partner.status === 'Approved' && (
                         <svg className="mr-1.5 h-2 w-2 text-green-600" fill="currentColor" viewBox="0 0 8 8">
                           <circle cx="4" cy="4" r="3" />
@@ -354,10 +352,10 @@ export default function PartnersPage() {
                             <div className="flex flex-col md:flex-row md:items-center gap-6">
                               <div className="flex-shrink-0">
                                 <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-lg">
-                                  <img 
-                                    src={getAvatarUrl(partner)} 
+                                  <img
+                                    src={getAvatarUrl(partner)}
                                     alt="Profile"
-                                    className="w-full h-full object-cover" 
+                                    className="w-full h-full object-cover"
                                   />
                                 </div>
                               </div>
@@ -369,13 +367,12 @@ export default function PartnersPage() {
                                 </div>
                               </div>
                               <div className="mt-4 md:mt-0 flex md:flex-col gap-3 flex-wrap">
-                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                  partner.status === 'Approved' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : partner.status === 'Rejected' 
-                                      ? 'bg-red-100 text-red-800' 
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'Approved'
+                                    ? 'bg-green-100 text-green-800'
+                                    : partner.status === 'Rejected'
+                                      ? 'bg-red-100 text-red-800'
                                       : 'bg-yellow-100 text-yellow-800'
-                                }`}>
+                                  }`}>
                                   {partner.status || "Pending"}
                                 </span>
                               </div>
@@ -520,9 +517,9 @@ export default function PartnersPage() {
                                   <div className="flex flex-col col-span-1 md:col-span-2">
                                     <span className="font-medium text-gray-700 mb-2">Audio Introduction</span>
                                     <div className="bg-gray-50 p-3 rounded-lg">
-                                      <audio 
-                                        controls 
-                                        src={partner.audioIntro} 
+                                      <audio
+                                        controls
+                                        src={partner.audioIntro}
                                         className="w-full"
                                       />
                                     </div>
@@ -552,8 +549,8 @@ export default function PartnersPage() {
               {search ? "Try changing your search criteria or clear the search box" : "There are no partners in the system yet"}
             </p>
             {search && (
-              <button 
-                onClick={() => setSearch("")} 
+              <button
+                onClick={() => setSearch("")}
                 className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
               >
                 Clear search
@@ -575,7 +572,7 @@ export default function PartnersPage() {
                   </svg>
                   Approve Partner
                 </h3>
-                <button 
+                <button
                   onClick={() => setShowApproveModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -603,13 +600,13 @@ export default function PartnersPage() {
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setShowApproveModal(false)}
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleApprovePartner}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
               >
@@ -635,7 +632,7 @@ export default function PartnersPage() {
                   </svg>
                   Reject Partner
                 </h3>
-                <button 
+                <button
                   onClick={() => setShowRejectModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -664,13 +661,13 @@ export default function PartnersPage() {
               </div>
             </div>
             <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setShowRejectModal(false)}
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleRejectPartner}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
                 disabled={!actionNote.trim()}

@@ -44,7 +44,7 @@ function ComponentGetPayout({appPassword}) {
 
             setLoading(true);
 
-            let blob=await get(`/payment/api/admin/get-payout-details?from=${date}`,cookies.get('access_token'),{blob:true});
+            let blob=await get(`/payment/api/admin/get-payout-details?from=${date}`,cookies.get('access_token'),'',{blob:true});
             if (blob) {
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);

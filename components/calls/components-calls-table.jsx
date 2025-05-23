@@ -117,7 +117,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                     title: 'Ring Duration',
                                     render: ({ ringDuration }) => {
                                         return <div className="flex items-center gap-2 justify-center">
-                                        <div className="font-semibold text-center">{ringDuration} secs</div>
+                                        <div className="font-semibold text-center">{ringDuration? `${ringDuration} secs` : 'N/A'}</div>
                                     </div>},
                                 },
                                 {

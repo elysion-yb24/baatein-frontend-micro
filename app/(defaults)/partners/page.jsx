@@ -43,16 +43,35 @@ export default function PartnersPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionPartnerId, setActionPartnerId] = useState(null);
   const [actionNote, setActionNote] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [partnersPerPage] = useState(10); // Default to 10 partners per page
+  const [totalPartners, setTotalPartners] = useState(0);
 
   const fetchPartners = () => {
     setLoading(true);
-    fetch("https://battein-onboard-brown.vercel.app/api/partners")
+    // Need to properly construct the API URL to include pagination parameters
+    const apiUrl = `https://battein-onboard-brown.vercel.app/api/partners`;
+    
+    // First get the total count
+    fetch(apiUrl)
       .then((res) => res.json())
       .then((data) => {
+        console.log("Total partners fetched:", data.partners?.length || 0);
         setPartners(data.partners || []);
+        setTotalPartners(data.partners?.length || 0);
         setLoading(false);
+        
+        if (data.partners?.length > 0) {
+          setNotification({
+            type: "success",
+            message: `${data.partners.length} partners loaded successfully`
+          });
+        }
       })
       .catch((err) => {
+        console.error("Error fetching partners:", err);
         setError("Failed to fetch partners");
         setLoading(false);
       });
@@ -154,6 +173,13 @@ export default function PartnersPage() {
     const searchValue = search.replace(/\s+/g, "").toLowerCase();
     return phone.includes(searchValue);
   });
+
+  // Get current partners for the active page
+  const indexOfLastPartner = currentPage * partnersPerPage;
+  const indexOfFirstPartner = indexOfLastPartner - partnersPerPage;
+  const currentPartners = filteredPartners.slice(indexOfFirstPartner, indexOfLastPartner);
+
+  const totalPages = Math.ceil(filteredPartners.length / partnersPerPage);
 
   if (loading && partners.length === 0) return (
     <div className="flex flex-col items-center justify-center min-h-[300px]">
@@ -270,7 +296,7 @@ export default function PartnersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {filteredPartners.map((partner) => (
+            {currentPartners.map((partner) => (
               <>
                 <tr key={partner._id} className="hover:bg-blue-50 transition-all group">
                   <td className="px-6 py-4">
@@ -288,7 +314,7 @@ export default function PartnersPage() {
                   <td className="px-6 py-4 text-gray-600">
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 002-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                       </svg>
                       +91 {partner.phoneNumber || partner.kyc?.phone || 'N/A'}
                     </div>
@@ -488,11 +514,21 @@ export default function PartnersPage() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                 <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Spoken Language</span>
-                                  <div className="flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <div className="flex flex-wrap gap-2">
+                                    <svg className="w-5 h-5 text-blue-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
                                     </svg>
-                                    <span className="text-gray-800">{partner.spokenLanguage || "Not specified"}</span>
+                                    {Array.isArray(partner.language) && partner.language.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1">
+                                        {partner.language.map((lang, idx) => (
+                                          <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                            {typeof lang === 'object' ? lang.label || lang.value : lang}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-500">Not specified</span>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="flex flex-col">
@@ -558,6 +594,74 @@ export default function PartnersPage() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-6">
+        <nav className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">
+            Showing{" "}
+            <span className="font-medium text-gray-700">{filteredPartners.length > 0 ? indexOfFirstPartner + 1 : 0}</span> to{" "}
+            <span className="font-medium text-gray-700">{Math.min(indexOfLastPartner, filteredPartners.length)}</span> of{" "}
+            <span className="font-medium text-gray-700">{filteredPartners.length}</span> partners
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className="p-2 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+                disabled={currentPage === 1}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+              
+              {/* Page numbers */}
+              {[...Array(Math.min(5, totalPages))].map((_, idx) => {
+                // Logic to show pages around current page
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = idx + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = idx + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + idx;
+                } else {
+                  pageNum = currentPage - 2 + idx;
+                }
+                
+                // Only render if pageNum is valid
+                if (pageNum > 0 && pageNum <= totalPages) {
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                        currentPage === pageNum
+                          ? "bg-blue-600 text-white font-medium"
+                          : "bg-white text-gray-700 border border-gray-200 hover:bg-blue-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                }
+                return null;
+              })}
+              
+              <button
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                className="p-2 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+                disabled={currentPage === totalPages}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+          )}
+        </nav>
       </div>
 
       {/* Approval Modal */}
@@ -638,7 +742,7 @@ export default function PartnersPage() {
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
+</svg>
                 </button>
               </div>
             </div>

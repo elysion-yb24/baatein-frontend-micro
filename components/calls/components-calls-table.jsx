@@ -113,6 +113,14 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                     </div>},
                                 },
                                 {
+                                    accessor: 'ringDuration',
+                                    title: 'Ring Duration',
+                                    render: ({ ringDuration }) => {
+                                        return <div className="flex items-center gap-2 justify-center">
+                                        <div className="font-semibold text-center">{ringDuration} secs</div>
+                                    </div>},
+                                },
+                                {
                                     accessor:'pickedAt',
                                     title: 'Picked At',
                                     render:({pickedAt})=>{

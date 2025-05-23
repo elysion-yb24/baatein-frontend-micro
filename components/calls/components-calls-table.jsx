@@ -35,7 +35,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                             className="table-hover whitespace-nowrap"
                             records={initialRecords}
                             rowClassName={({ status }) => {
-                                return status === "ongoing" ? "bg-green-100" : ""
+                                return status === "ongoing" ? "!bg-green-100" : ""
                             }}
                             columns={[
                                 {

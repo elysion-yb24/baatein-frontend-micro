@@ -122,7 +122,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                                             {receiverDuration % 60} secs
                                                         </>
                                                     ) : (
-                                                        ""
+                                                        "N/A"
                                                     )}
                                                 </div>
 
@@ -133,9 +133,19 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'ringDuration',
                                     title: 'Ring Duration',
-                                    render: ({ ringDuration }) => {
+                                    render: ({ ringDuration,status }) => {
                                         return <div className="flex items-center gap-2 justify-center">
-                                            <div className="font-semibold text-center">{ringDuration ? `${ringDuration} secs` : 'N/A'}</div>
+                                            <div className="font-semibold text-center">
+                                                    {status === "ongoing" ? (
+                                                        "-"
+                                                    ) : ringDuration >=0 ? (
+                                                        <>
+                                                            {ringDuration} secs
+                                                        </>
+                                                    ) : (
+                                                        "N/A"
+                                                    )}
+                                            </div>
                                         </div>
                                     },
                                 },

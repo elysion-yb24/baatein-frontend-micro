@@ -380,7 +380,6 @@ export const get=async(endpoint,access_token,refresh_token,options)=>{
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
-                'cookies': refresh_token || '',
                 'Authorization': 'Bearer ' + access_token,
             },
         })

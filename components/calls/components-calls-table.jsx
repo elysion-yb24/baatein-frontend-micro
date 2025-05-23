@@ -15,7 +15,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
         if (isNaN(utcDate.getTime()) || utcDate.getFullYear() === 1970) return 'N/A';
         return utcDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
     }
-    
+
     useEffect(() => {
         return () => {
             dispatch(removeVideo());
@@ -34,6 +34,9 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                             highlightOnHover
                             className="table-hover whitespace-nowrap"
                             records={initialRecords}
+                            rowClassName={({ status }) => {
+                                return status === "ongoing" ? "bg-green-100" : ""
+                            }}
                             columns={[
                                 {
                                     accessor: '_id',
@@ -64,10 +67,10 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'awsUrl',
                                     title: 'Play Video',
-                                    render: ({ awsUrl,type,channelId}) =>
+                                    render: ({ awsUrl, type, channelId }) =>
 
                                         <div className="flex items-center gap-2 justify-center">
-                                            {awsUrl?.includes('.m3u8') && channelId%5==0? <button className="btn btn-sm btn-primary" onClick={() => {
+                                            {awsUrl?.includes('.m3u8') && channelId % 5 == 0 ? <button className="btn btn-sm btn-primary" onClick={() => {
                                                 dispatch(addVideo(awsUrl));
                                             }}>Play {type}</button> : 'n/a'}
                                         </div>
@@ -76,7 +79,7 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'callType',
                                     title: 'Call Type',
-                                    render: ({ type}) =>
+                                    render: ({ type }) =>
 
                                         <div className="flex items-center gap-2 justify-center">
                                             {type}
@@ -107,37 +110,53 @@ function ComponentCallsTable({ isMounted, initialRecords, formData, setFormData,
                                 {
                                     accessor: 'receiverDuration',
                                     title: 'Duration',
-                                    render: ({ receiverDuration }) => {
+                                    render: ({ receiverDuration, status }) => {
                                         return <div className="flex items-center gap-2 justify-center">
-                                        <div className="font-semibold text-center">{(receiverDuration / 60)?.toFixed(0) > 0 ? (receiverDuration / 60)?.toFixed(0) : ''} {(receiverDuration / 60).toFixed(0) > 0 && 'mins'} {receiverDuration % 60} secs</div>
-                                    </div>},
+                                            <div className="font-semibold text-center">
+                                                <div className="font-semibold text-center">
+                                                    {status === "ongoing" ? (
+                                                        "-"
+                                                    ) : receiverDuration > 0 ? (
+                                                        <>
+                                                            {Math.floor(receiverDuration / 60) > 0 && `${Math.floor(receiverDuration / 60)} mins `}
+                                                            {receiverDuration % 60} secs
+                                                        </>
+                                                    ) : (
+                                                        ""
+                                                    )}
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    },
                                 },
                                 {
                                     accessor: 'ringDuration',
                                     title: 'Ring Duration',
                                     render: ({ ringDuration }) => {
                                         return <div className="flex items-center gap-2 justify-center">
-                                        <div className="font-semibold text-center">{ringDuration? `${ringDuration} secs` : 'N/A'}</div>
-                                    </div>},
+                                            <div className="font-semibold text-center">{ringDuration ? `${ringDuration} secs` : 'N/A'}</div>
+                                        </div>
+                                    },
                                 },
                                 {
-                                    accessor:'pickedAt',
+                                    accessor: 'pickedAt',
                                     title: 'Picked At',
-                                    render:({pickedAt})=>{
+                                    render: ({ pickedAt }) => {
                                         return <div>{convertToIST(pickedAt)}</div>
                                     }
                                 },
                                 {
-                                    accessor:'endedAt',
+                                    accessor: 'endedAt',
                                     title: 'Ended At',
-                                    render:({endTime,receiverDuration})=>{
-                                        return <div>{receiverDuration?convertToIST(endTime):'N/A'}</div>
+                                    render: ({ endTime, receiverDuration }) => {
+                                        return <div>{receiverDuration ? convertToIST(endTime) : 'N/A'}</div>
                                     }
                                 },
                                 {
-                                    accessor:'createdAt',
+                                    accessor: 'createdAt',
                                     title: 'Created At',
-                                    render:({createdAt})=>{
+                                    render: ({ createdAt }) => {
                                         return <div>{convertToIST(createdAt)}</div>
                                     }
                                 },

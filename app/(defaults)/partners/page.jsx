@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import Link from "next/link";
 
 // Approve with additional information
@@ -30,6 +30,13 @@ const rejectPartner = async (partnerId, reason) => {
   return response.json();
 };
 
+// Delete partner
+const deletePartner = async (partnerId) => {
+  await fetch(`https://battein-onboard-brown.vercel.app/api/partners/${partnerId}`, {
+    method: 'DELETE',
+  });
+};
+
 export default function PartnersPage() {
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,18 +56,31 @@ export default function PartnersPage() {
   const [partnersPerPage] = useState(10); // Default to 10 partners per page
   const [totalPartners, setTotalPartners] = useState(0);
 
+  // Add a new state for action loading
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Add state for profile picture modal
+  const [showProfilePicModal, setShowProfilePicModal] = useState(false);
+  const [modalProfilePic, setModalProfilePic] = useState(null);
+
+  // Add state for inline editing
+  const [editingPartnerId, setEditingPartnerId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editSuccess, setEditSuccess] = useState("");
+  const [editError, setEditError] = useState("");
+
   const fetchPartners = () => {
     setLoading(true);
-    // Need to properly construct the API URL to include pagination parameters
-    const apiUrl = `https://battein-onboard-brown.vercel.app/api/partners`;
+    // Include pagination parameters in the API URL
+    const apiUrl = `https://battein-onboard-brown.vercel.app/api/partners?page=${currentPage}&limit=${partnersPerPage}`;
     
-    // First get the total count
     fetch(apiUrl)
       .then((res) => res.json())
       .then((data) => {
         console.log("Total partners fetched:", data.partners?.length || 0);
         setPartners(data.partners || []);
-        setTotalPartners(data.partners?.length || 0);
+        setTotalPartners(data.pagination?.total || data.partners?.length || 0);
         setLoading(false);
         
         if (data.partners?.length > 0) {
@@ -79,7 +99,7 @@ export default function PartnersPage() {
 
   useEffect(() => {
     fetchPartners();
-  }, []);
+  }, [currentPage]); // Add currentPage as a dependency to refetch when page changes
 
   useEffect(() => {
     if (notification) {
@@ -128,6 +148,7 @@ export default function PartnersPage() {
   };
 
   const handleApprovePartner = async () => {
+    setActionLoading(true);
     setLoading(true);
     try {
       await approvePartner(actionPartnerId, actionNote);
@@ -144,42 +165,99 @@ export default function PartnersPage() {
       });
     } finally {
       setLoading(false);
+      setActionLoading(false);
     }
   };
 
   const handleRejectPartner = async () => {
+    setActionLoading(true);
     setLoading(true);
     try {
       await rejectPartner(actionPartnerId, actionNote);
+      await deletePartner(actionPartnerId);
       fetchPartners();
       setShowRejectModal(false);
       setNotification({
         type: "success",
-        message: "Partner rejected successfully!"
+        message: "Partner rejected and deleted successfully!"
       });
     } catch (e) {
       setNotification({
         type: "error",
-        message: "Failed to reject partner"
+        message: "Failed to reject and delete partner"
       });
     } finally {
       setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  // Filter partners by phone number
+  // Filter partners by phone number (client-side search, but only on current page)
   const filteredPartners = partners.filter((partner) => {
     const phone = (partner.phoneNumber || partner.kyc?.phone || "").replace(/\s+/g, "").toLowerCase();
     const searchValue = search.replace(/\s+/g, "").toLowerCase();
     return phone.includes(searchValue);
   });
 
-  // Get current partners for the active page
-  const indexOfLastPartner = currentPage * partnersPerPage;
-  const indexOfFirstPartner = indexOfLastPartner - partnersPerPage;
-  const currentPartners = filteredPartners.slice(indexOfFirstPartner, indexOfLastPartner);
+  // Calculate totalPages from totalPartners and partnersPerPage
+  const totalPages = Math.ceil(totalPartners / partnersPerPage);
 
-  const totalPages = Math.ceil(filteredPartners.length / partnersPerPage);
+  // Add handler to start editing
+  const handleStartEdit = (partner) => {
+    setEditingPartnerId(partner._id);
+    setEditForm({
+      kyc: {
+        panNumber: partner.kyc?.panNumber || "",
+      },
+      bankDetails: partner.bankDetails ? { ...partner.bankDetails } : {},
+      bio: partner.bio || "",
+      hobbies: Array.isArray(partner.hobbies) ? partner.hobbies.join(", ") : partner.hobbies || "",
+    });
+    setEditSuccess("");
+    setEditError("");
+  };
+
+  // Add handler to update edit form
+  const handleEditInput = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith("bankDetails.")) {
+      const key = name.replace("bankDetails.", "");
+      setEditForm((prev) => ({ ...prev, bankDetails: { ...prev.bankDetails, [key]: value } }));
+    } else if (name.startsWith("kyc.")) {
+      const key = name.replace("kyc.", "");
+      setEditForm((prev) => ({ ...prev, kyc: { ...prev.kyc, [key]: value } }));
+    } else {
+      setEditForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Add handler to save edit
+  const handleSaveEdit = async (partnerId) => {
+    setEditSaving(true);
+    setEditSuccess("");
+    setEditError("");
+    try {
+      const payload = {
+        kyc: { panNumber: editForm.kyc.panNumber },
+        bankDetails: editForm.bankDetails,
+        bio: editForm.bio,
+        hobbies: editForm.hobbies.split(",").map((h) => h.trim()).filter(Boolean),
+      };
+      const res = await fetch(`https://battein-onboard-brown.vercel.app/api/partners/${partnerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Failed to update partner");
+      setEditSuccess("Partner updated successfully!");
+      setEditingPartnerId(null);
+      fetchPartners();
+    } catch (err) {
+      setEditError(err.message || "Failed to update partner");
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   if (loading && partners.length === 0) return (
     <div className="flex flex-col items-center justify-center min-h-[300px]">
@@ -283,6 +361,19 @@ export default function PartnersPage() {
         </div>
       )}
 
+      {/* Add spinner overlay for actionLoading */}
+      {actionLoading && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-[100]">
+          <div className="bg-white p-8 rounded-lg shadow-lg flex flex-col items-center">
+            <svg className="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+            <span className="text-lg text-gray-700">Processing...</span>
+          </div>
+        </div>
+      )}
+
       {/* Partners Table */}
       <div className="overflow-hidden bg-white rounded-2xl shadow-lg">
         <table className="min-w-full divide-y divide-gray-200">
@@ -296,7 +387,7 @@ export default function PartnersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {currentPartners.map((partner) => (
+            {filteredPartners.map((partner) => (
               <>
                 <tr key={partner._id} className="hover:bg-blue-50 transition-all group">
                   <td className="px-6 py-4">
@@ -439,6 +530,49 @@ export default function PartnersPage() {
                                 </svg>
                                 PAN Details
                               </h3>
+                              <div className="flex justify-end mb-4">
+                                {editingPartnerId === partner._id ? (
+                                  <div className="p-4 bg-blue-50 rounded-xl mb-4">
+                                    <div className="mb-2">
+                                      <label className="font-semibold">PAN Card Number:</label>
+                                      <input type="text" name="kyc.panNumber" value={editForm.kyc.panNumber} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
+                                    </div>
+                                    <div className="mb-2">
+                                      <label className="font-semibold">Bank Details:</label>
+                                      {Object.entries(editForm.bankDetails).map(([key, value]) => (
+                                        <div key={key} className="mb-1">
+                                          <span className="capitalize">{key}:</span>
+                                          <input type="text" name={`bankDetails.${key}`} value={value} onChange={handleEditInput} className="ml-2 border rounded px-2 py-1" />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mb-2">
+                                      <label className="font-semibold">Bio:</label>
+                                      <textarea name="bio" value={editForm.bio} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
+                                    </div>
+                                    <div className="mb-2">
+                                      <label className="font-semibold">Hobbies (comma separated):</label>
+                                      <input type="text" name="hobbies" value={editForm.hobbies} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
+                                    </div>
+                                    <div className="flex gap-2 mt-2">
+                                      <button onClick={() => handleSaveEdit(partner._id)} disabled={editSaving} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">{editSaving ? "Saving..." : "Save"}</button>
+                                      <button onClick={() => setEditingPartnerId(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
+                                    </div>
+                                    {editSuccess && <div className="text-green-600 mt-2">{editSuccess}</div>}
+                                    {editError && <div className="text-red-600 mt-2">{editError}</div>}
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => handleStartEdit(partner)}
+                                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium shadow-sm hover:bg-blue-700 transition-all text-sm gap-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h2v2h-2v-2z" />
+                                    </svg>
+                                    Edit
+                                  </button>
+                                )}
+                              </div>
                               <div className="space-y-4">
                                 <div className="flex items-center">
                                   <span className="font-medium text-gray-700 w-40">PAN Card Number:</span>
@@ -514,13 +648,28 @@ export default function PartnersPage() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                 <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Spoken Language</span>
-                                  <div className="flex flex-wrap gap-2">
-                                    <svg className="w-5 h-5 text-blue-400 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
-                                    </svg>
-                                    {Array.isArray(partner.language) && partner.language.length > 0 ? (
+                                  {(() => {
+                                    let spokenLangs = partner.spokenLanguages;
+                                    if (typeof spokenLangs === 'string') {
+                                      try {
+                                        spokenLangs = JSON.parse(spokenLangs);
+                                      } catch {
+                                        spokenLangs = [];
+                                      }
+                                    }
+                                    if (!Array.isArray(spokenLangs) || !spokenLangs.length) {
+                                      spokenLangs = partner.language;
+                                      if (typeof spokenLangs === 'string') {
+                                        try {
+                                          spokenLangs = JSON.parse(spokenLangs);
+                                        } catch {
+                                          spokenLangs = [];
+                                        }
+                                      }
+                                    }
+                                    return Array.isArray(spokenLangs) && spokenLangs.length > 0 ? (
                                       <div className="flex flex-wrap gap-1">
-                                        {partner.language.map((lang, idx) => (
+                                        {spokenLangs.map((lang, idx) => (
                                           <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                                             {typeof lang === 'object' ? lang.label || lang.value : lang}
                                           </span>
@@ -528,13 +677,13 @@ export default function PartnersPage() {
                                       </div>
                                     ) : (
                                       <span className="text-gray-500">Not specified</span>
-                                    )}
-                                  </div>
+                                    );
+                                  })()}
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Hobbies</span>
                                   <div className="flex flex-wrap gap-2">
-                                    {Array.isArray(partner.hobbies) && partner.hobbies.length ? (
+                                    {Array.isArray(partner.hobbies) && partner.hobbies.length > 0 ? (
                                       partner.hobbies.map((hobby, index) => (
                                         <span key={index} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
                                           {hobby}
@@ -542,6 +691,24 @@ export default function PartnersPage() {
                                       ))
                                     ) : (
                                       <span className="text-gray-500">Not specified</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col col-span-1 md:col-span-2">
+                                  <span className="font-medium text-gray-700 mb-2">Profile Picture</span>
+                                  <div className="flex items-center gap-4">
+                                    {partner.profilePicture ? (
+                                      <img
+                                        src={partner.profilePicture}
+                                        alt="Profile"
+                                        className="w-24 h-24 rounded-full object-cover border shadow cursor-pointer transition-transform hover:scale-105"
+                                        onClick={() => {
+                                          setModalProfilePic(partner.profilePicture);
+                                          setShowProfilePicModal(true);
+                                        }}
+                                      />
+                                    ) : (
+                                      <span className="text-gray-500">No profile picture</span>
                                     )}
                                   </div>
                                 </div>
@@ -601,66 +768,74 @@ export default function PartnersPage() {
         <nav className="flex justify-between items-center">
           <div className="text-sm text-gray-500">
             Showing{" "}
-            <span className="font-medium text-gray-700">{filteredPartners.length > 0 ? indexOfFirstPartner + 1 : 0}</span> to{" "}
-            <span className="font-medium text-gray-700">{Math.min(indexOfLastPartner, filteredPartners.length)}</span> of{" "}
-            <span className="font-medium text-gray-700">{filteredPartners.length}</span> partners
+            <span className="font-medium text-gray-700">
+              {partners.length > 0 ? (currentPage - 1) * partnersPerPage + 1 : 0}
+            </span>{" "}
+            to{" "}
+            <span className="font-medium text-gray-700">
+              {Math.min(currentPage * partnersPerPage, totalPartners)}
+            </span>{" "}
+            of{" "}
+            <span className="font-medium text-gray-700">{totalPartners}</span> partners
           </div>
-          {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+            >
+              Previous
+            </button>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className="p-2 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
-                disabled={currentPage === 1}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
-              </button>
-              
-              {/* Page numbers */}
-              {[...Array(Math.min(5, totalPages))].map((_, idx) => {
-                // Logic to show pages around current page
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = idx + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = idx + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + idx;
-                } else {
-                  pageNum = currentPage - 2 + idx;
-                }
-                
-                // Only render if pageNum is valid
-                if (pageNum > 0 && pageNum <= totalPages) {
+              {Array.from({ length: Math.ceil(totalPartners / partnersPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show first page, last page, current page, and pages around current page
+                  return page === 1 || 
+                         page === Math.ceil(totalPartners / partnersPerPage) ||
+                         Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  // Add ellipsis if there's a gap
+                  if (index > 0 && page - array[index - 1] > 1) {
+                    return (
+                      <Fragment key={`ellipsis-${page}`}>
+                        <span className="px-2">...</span>
+                        <button
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-lg ${
+                            currentPage === page
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-blue-700 border border-gray-200 hover:bg-blue-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      </Fragment>
+                    );
+                  }
                   return (
                     <button
-                      key={idx}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
-                        currentPage === pageNum
-                          ? "bg-blue-600 text-white font-medium"
-                          : "bg-white text-gray-700 border border-gray-200 hover:bg-blue-50"
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1 rounded-lg ${
+                        currentPage === page
+                          ? "bg-blue-600 text-white"
+                          : "bg-white text-blue-700 border border-gray-200 hover:bg-blue-50"
                       }`}
                     >
-                      {pageNum}
+                      {page}
                     </button>
                   );
-                }
-                return null;
-              })}
-              
-              <button
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                className="p-2 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
-                disabled={currentPage === totalPages}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                </svg>
-              </button>
+                })}
             </div>
-          )}
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(totalPartners / partnersPerPage)))}
+              disabled={currentPage >= Math.ceil(totalPartners / partnersPerPage)}
+              className="px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+            >
+              Next
+            </button>
+          </div>
         </nav>
       </div>
 
@@ -742,7 +917,7 @@ export default function PartnersPage() {
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-</svg>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -816,20 +991,36 @@ export default function PartnersPage() {
         </div>
       )}
 
+      {/* Profile Picture Modal */}
+      {showProfilePicModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200] animate-fade-in" onClick={() => setShowProfilePicModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-4 max-w-2xl w-full flex flex-col items-center relative animate-zoom-in" onClick={e => e.stopPropagation()}>
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black text-2xl"
+              onClick={() => setShowProfilePicModal(false)}
+            >
+              &times;
+            </button>
+            <img src={modalProfilePic} alt="Profile Zoomed" className="max-w-full max-h-[70vh] rounded-xl transition-all" />
+          </div>
+        </div>
+      )}
+
       {/* Add Animation styles */}
-      <style jsx>{`
-        @keyframes slide-in {
-          0% {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          100% {
-            transform: translateX(0);
-            opacity: 1;
-          }
+      <style jsx global>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out forwards;
+        .animate-fade-in {
+          animation: fade-in 0.2s ease;
+        }
+        @keyframes zoom-in {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-zoom-in {
+          animation: zoom-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
       `}</style>
     </div>

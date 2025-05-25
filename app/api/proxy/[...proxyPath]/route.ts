@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+function devOnly() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Proxy is only available in development' }, { status: 403 });
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest, { params }: { params: { proxyPath: string[] } }) {
+  const devCheck = devOnly();
+  if (devCheck) return devCheck;
   const targetUrl = 'https://micro.baaten.in';
   const path = '/' + params.proxyPath.join('/');
   const searchParams = request.nextUrl.searchParams.toString();
@@ -34,6 +43,8 @@ export async function GET(request: NextRequest, { params }: { params: { proxyPat
 }
 
 export async function POST(request: NextRequest, { params }: { params: { proxyPath: string[] } }) {
+  const devCheck = devOnly();
+  if (devCheck) return devCheck;
   const targetUrl = 'https://micro.baaten.in';
   const path = '/' + params.proxyPath.join('/');
   const searchParams = request.nextUrl.searchParams.toString();
@@ -71,6 +82,8 @@ export async function POST(request: NextRequest, { params }: { params: { proxyPa
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { proxyPath: string[] } }) {
+  const devCheck = devOnly();
+  if (devCheck) return devCheck;
   const targetUrl = 'https://micro.baaten.in';
   const path = '/' + params.proxyPath.join('/');
   const searchParams = request.nextUrl.searchParams.toString();

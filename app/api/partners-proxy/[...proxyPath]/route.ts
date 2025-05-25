@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest, { params }: { params: { proxyPath: string[] } }) {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Proxy is only available in development' }, { status: 403 });
+  }
   const targetUrl = 'https://battein-onboard-brown.vercel.app';
   const path = '/' + params.proxyPath.join('/');
   const searchParams = request.nextUrl.searchParams.toString();

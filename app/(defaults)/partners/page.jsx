@@ -648,37 +648,17 @@ export default function PartnersPage() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                 <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Spoken Language</span>
-                                  {(() => {
-                                    let spokenLangs = partner.spokenLanguages;
-                                    if (typeof spokenLangs === 'string') {
-                                      try {
-                                        spokenLangs = JSON.parse(spokenLangs);
-                                      } catch {
-                                        spokenLangs = [];
-                                      }
-                                    }
-                                    if (!Array.isArray(spokenLangs) || !spokenLangs.length) {
-                                      spokenLangs = partner.language;
-                                      if (typeof spokenLangs === 'string') {
-                                        try {
-                                          spokenLangs = JSON.parse(spokenLangs);
-                                        } catch {
-                                          spokenLangs = [];
-                                        }
-                                      }
-                                    }
-                                    return Array.isArray(spokenLangs) && spokenLangs.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1">
-                                        {spokenLangs.map((lang, idx) => (
-                                          <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                                            {typeof lang === 'object' ? lang.label || lang.value : lang}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <span className="text-gray-500">Not specified</span>
-                                    );
-                                  })()}
+                                  {Array.isArray(partner.spokenLanguages) && partner.spokenLanguages.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {partner.spokenLanguages.map((lang, idx) => (
+                                        <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                          {lang}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500">Not specified</span>
+                                  )}
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Hobbies</span>
@@ -711,6 +691,12 @@ export default function PartnersPage() {
                                       <span className="text-gray-500">No profile picture</span>
                                     )}
                                   </div>
+                                </div>
+                                <div className="flex flex-col col-span-1 md:col-span-2">
+                                  <span className="font-medium text-gray-700 mb-2">Earning Preference</span>
+                                  <span className="text-gray-900">
+                                    {partner.earningPreference ? (partner.earningPreference.charAt(0).toUpperCase() + partner.earningPreference.slice(1)) : 'Not specified'}
+                                  </span>
                                 </div>
                                 <div className="flex flex-col col-span-1 md:col-span-2">
                                   <span className="font-medium text-gray-700 mb-2">Bio</span>

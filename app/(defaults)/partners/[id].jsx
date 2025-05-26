@@ -31,7 +31,7 @@ export default function PartnerDetailsPage({ params }) {
           },
           profilePicture: p.profilePicture || "",
           bankDetails: { ...p.bankDetails },
-          spokenLanguage: p.spokenLanguage || [],
+          spokenLanguages: p.spokenLanguages || [],
           hobby: p.hobby || "",
           bio: p.bio || "",
           audioIntro: p.audioIntro || "",
@@ -93,7 +93,7 @@ export default function PartnerDetailsPage({ params }) {
       formData.append("name", form.name);
       formData.append("bio", form.bio);
       formData.append("hobby", form.hobby);
-      formData.append("spokenLanguage", JSON.stringify(form.spokenLanguage));
+      formData.append("spokenLanguages", JSON.stringify(form.spokenLanguages));
       // Hobbies
       formData.append("hobbies", JSON.stringify(form.hobbies));
       // KYC
@@ -184,7 +184,7 @@ export default function PartnerDetailsPage({ params }) {
         {/* Spoken Languages */}
         <div>
           <label className="font-semibold">Spoken Languages (comma separated):</label>
-          <input type="text" value={Array.isArray(form.spokenLanguage) ? form.spokenLanguage.join(", ") : form.spokenLanguage || ""} onChange={handleLanguagesInput} className="block w-full border rounded px-3 py-2 mt-1" />
+          <input type="text" value={Array.isArray(form.spokenLanguages) ? form.spokenLanguages.join(", ") : form.spokenLanguages || ""} onChange={handleLanguagesInput} className="block w-full border rounded px-3 py-2 mt-1" />
         </div>
         {/* Hobby */}
         <div>

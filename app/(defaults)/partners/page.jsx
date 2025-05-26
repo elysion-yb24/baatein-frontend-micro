@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, Fragment } from "react";
 import Link from "next/link";
+import { compressImage, userOnboardingApi } from "@/utils";
+import Cookies from "universal-cookie";
 
 // Approve with additional information
 const approvePartner = async (partnerId, note) => {
@@ -38,6 +40,8 @@ const deletePartner = async (partnerId) => {
 };
 
 export default function PartnersPage() {
+  const cookies = new Cookies(null, { path: '/' });
+
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -50,6 +54,7 @@ export default function PartnersPage() {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionPartnerId, setActionPartnerId] = useState(null);
   const [actionNote, setActionNote] = useState("");
+  const [selectedPartner,setSelectedPartner]=useState(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,23 +140,106 @@ export default function PartnersPage() {
     setModalPanCard(null);
   };
 
-  const openApproveModal = (partnerId) => {
-    setActionPartnerId(partnerId);
+  const openApproveModal = (partner) => {
+    setActionPartnerId(partner?._id)
+    setSelectedPartner(partner);
     setActionNote("");
     setShowApproveModal(true);
   };
 
-  const openRejectModal = (partnerId) => {
-    setActionPartnerId(partnerId);
+  const openRejectModal = (partner) => {
+    setSelectedPartner(partner);
     setActionNote("");
     setShowRejectModal(true);
   };
 
+
+
+  const avatar_Images= [
+    "https://baatein.blob.core.windows.net/profile/avatars/67330ec8fd6d9676d4f561a3_avatar",
+    "https://baatein.blob.core.windows.net/profile/avatars/6736678efd6d9676d4003e21_avatar",
+    "https://baatein.blob.core.windows.net/profile/avatars/6718015be89759019e441e45_avatar",
+    "https://baatein.blob.core.windows.net/profile/avatars/670b97e55fa05dd4aea47e44_avatar"
+  ]
+
+  function reencodeImageBlob(blob, mimeType = 'image/jpeg', quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+  
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+  
+        canvas.toBlob(
+          (newBlob) => {
+            if (newBlob) resolve(newBlob);
+            else reject(new Error('Canvas toBlob failed'));
+          },
+          mimeType,
+          quality
+        );
+      };
+  
+      img.onerror = () => reject(new Error('Image load error'));
+  
+      img.src = URL.createObjectURL(blob);
+    });
+  }
+  
+  
   const handleApprovePartner = async () => {
     setActionLoading(true);
     setLoading(true);
     try {
-      await approvePartner(actionPartnerId, actionNote);
+      console.log("Selectedd partner",selectedPartner);
+      // console.log('profile',selectedPartner?.profilePicture,typeof selectedPartner?.profilePicture);
+      const formData = new FormData()
+
+      formData.append('name',selectedPartner?.name);
+      formData.append('phone',selectedPartner?.phoneNumber);
+      formData.append('about',selectedPartner?.bio)
+      formData.append('videoRpm',29);
+      formData.append('payoutVideoRpm',9);
+      formData.append('rpm',6);
+      formData.append('payoutAudioRpm',2);
+      formData.append('role','friend');
+      formData.append('age',22);
+      formData.append('status','offline');
+
+
+      if(selectedPartner?.spokenLanguages?.length>0){
+        selectedPartner.spokenLanguages=selectedPartner.spokenLanguages.map(language=>language.toLowerCase());
+        formData.append('language',selectedPartner.spokenLanguages);
+      }
+
+      if(selectedPartner?.earningPreference?.toLowerCase === "video"){
+        formData.append('isVideoCallAllowed',true);
+        formData.append('isVideoCallAllowedAdmin',true);
+      }
+      
+      const imageResponse = await fetch(selectedPartner?.profilePicture || avatar_Images[Math.floor(Math.random()*avatar_Images.length)]);
+      const imageBlob = await imageResponse.blob();
+      const fixedBlob = await reencodeImageBlob(imageBlob, 'image/jpeg', 0.8);
+
+
+      const compressedAvatar=await compressImage(fixedBlob);
+      formData.append('avatar',compressedAvatar);
+      
+      const audioResponse=await fetch(selectedPartner?.audioIntro);
+      const audioBlob=await audioResponse.blob();
+      formData.append('sample',audioBlob);
+
+      const apiData = await userOnboardingApi('/auth/api/team/add-people', formData, cookies.get('access_token'))
+      if (apiData?.success) {
+          console.log('success',apiData);
+      } else {
+          throw new Error(apiData?.message);
+      }
+      await approvePartner(selectedPartner?._id, actionNote);
       fetchPartners();
       setShowApproveModal(false);
       setNotification({
@@ -159,6 +247,7 @@ export default function PartnersPage() {
         message: "Partner approved successfully!"
       });
     } catch (e) {
+      console.error(e);
       setNotification({
         type: "error",
         message: "Failed to approve partner"
@@ -500,7 +589,7 @@ export default function PartnersPage() {
                           <div className="bg-gray-50 px-6 py-4 flex gap-3 flex-wrap">
                             <button
                               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:from-green-600 hover:to-green-700 transition-all text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-green-500 disabled:hover:to-green-600"
-                              onClick={() => openApproveModal(partner._id)}
+                              onClick={() => openApproveModal(partner)}
                               disabled={partner.status === 'Approved'}
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

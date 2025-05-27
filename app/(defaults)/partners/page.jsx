@@ -213,7 +213,7 @@ export default function PartnersPage() {
 
       if (selectedPartner?.spokenLanguages?.length > 0) {
         selectedPartner.spokenLanguages.forEach(language => {
-          formData.append('language[]', language.toLowerCase());
+          formData.append('language', language.toLowerCase());
         });
       }
 

@@ -210,6 +210,9 @@ export default function PartnersPage() {
       formData.append('age',22);
       formData.append('status','offline');
 
+      if(selectedPartner?.bankDetails?.upiId){
+        formData.append('upi',selectedPartner?.bankDetails?.upiId);
+      }
 
       if (selectedPartner?.spokenLanguages?.length > 0) {
         selectedPartner.spokenLanguages.forEach(language => {

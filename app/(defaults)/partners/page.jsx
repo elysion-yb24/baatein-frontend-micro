@@ -211,9 +211,10 @@ export default function PartnersPage() {
       formData.append('status','offline');
 
 
-      if(selectedPartner?.spokenLanguages?.length>0){
-        selectedPartner.spokenLanguages=selectedPartner.spokenLanguages.map(language=>language.toLowerCase());
-        formData.append('language',selectedPartner.spokenLanguages);
+      if (selectedPartner?.spokenLanguages?.length > 0) {
+        selectedPartner.spokenLanguages.forEach(language => {
+          formData.append('language[]', language.toLowerCase());
+        });
       }
 
       if(selectedPartner?.earningPreference?.toLowerCase === "video"){

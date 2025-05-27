@@ -299,12 +299,37 @@ export default function PartnersPage() {
   const handleStartEdit = (partner) => {
     setEditingPartnerId(partner._id);
     setEditForm({
+      name: partner.name || "",
+      phoneNumber: partner.phoneNumber || "",
+      gender: partner.gender || "",
+      spokenLanguages: Array.isArray(partner.spokenLanguages) ? partner.spokenLanguages.join(", ") : partner.spokenLanguages || "",
+      hobbies: Array.isArray(partner.hobbies) ? partner.hobbies.join(", ") : partner.hobbies || "",
+      bio: partner.bio || "",
+      audioIntro: partner.audioIntro || "",
+      profilePicture: partner.profilePicture || "",
       kyc: {
         panNumber: partner.kyc?.panNumber || "",
+        panCardFile: partner.kyc?.panCardFile || "",
       },
-      bankDetails: partner.bankDetails ? { ...partner.bankDetails } : {},
-      bio: partner.bio || "",
-      hobbies: Array.isArray(partner.hobbies) ? partner.hobbies.join(", ") : partner.hobbies || "",
+      bankDetails: partner.bankDetails ? { 
+        bankAccountNumber: partner.bankDetails.bankAccountNumber || "",
+        accountHolderName: partner.bankDetails.accountHolderName || "",
+        ifscCode: partner.bankDetails.ifscCode || "",
+        branchName: partner.bankDetails.branchName || "",
+        upiId: partner.bankDetails.upiId || "",
+        cancelCheque: partner.bankDetails.cancelCheque || "",
+        ...partner.bankDetails 
+      } : {
+        bankAccountNumber: "",
+        accountHolderName: "",
+        ifscCode: "",
+        branchName: "",
+        upiId: "",
+        cancelCheque: "",
+      },
+      capturedPhoto: partner.capturedPhoto || "",
+      status: partner.status || "",
+      earningPreference: partner.earningPreference || "",
     });
     setEditSuccess("");
     setEditError("");
@@ -331,12 +356,24 @@ export default function PartnersPage() {
     setEditError("");
     try {
       const payload = {
-        kyc: { panNumber: editForm.kyc.panNumber },
-        bankDetails: editForm.bankDetails,
-        bio: editForm.bio,
+        name: editForm.name,
+        phoneNumber: editForm.phoneNumber,
+        gender: editForm.gender,
+        spokenLanguages: editForm.spokenLanguages.split(",").map((lang) => lang.trim()).filter(Boolean),
         hobbies: editForm.hobbies.split(",").map((h) => h.trim()).filter(Boolean),
+        bio: editForm.bio,
+        audioIntro: editForm.audioIntro,
+        profilePicture: editForm.profilePicture,
+        kyc: { 
+          panNumber: editForm.kyc.panNumber,
+          panCardFile: editForm.kyc.panCardFile,
+        },
+        bankDetails: editForm.bankDetails,
+        capturedPhoto: editForm.capturedPhoto,
+        status: editForm.status,
+        earningPreference: editForm.earningPreference,
       };
-      const res = await fetch(`https://battein-onboard-brown.vercel.app/api/partners/${partnerId}`, {
+      const res = await fetch(`/api/partners/${partnerId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -615,44 +652,577 @@ export default function PartnersPage() {
 
                           {/* Tabs Content */}
                           <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* PAN Section */}
+                            {/* Edit Partner Section */}
                             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-blue-700 border-b pb-2">
                                 <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h2v2h-2v-2z"></path>
                                 </svg>
-                                PAN Details
+                                Edit Partner Section
                               </h3>
                               <div className="flex justify-end mb-4">
                                 {editingPartnerId === partner._id ? (
-                                  <div className="p-4 bg-blue-50 rounded-xl mb-4">
-                                    <div className="mb-2">
-                                      <label className="font-semibold">PAN Card Number:</label>
-                                      <input type="text" name="kyc.panNumber" value={editForm.kyc.panNumber} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
-                                    </div>
-                                    <div className="mb-2">
-                                      <label className="font-semibold">Bank Details:</label>
-                                      {Object.entries(editForm.bankDetails).map(([key, value]) => (
-                                        <div key={key} className="mb-1">
-                                          <span className="capitalize">{key}:</span>
-                                          <input type="text" name={`bankDetails.${key}`} value={value} onChange={handleEditInput} className="ml-2 border rounded px-2 py-1" />
+                                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                    <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+                                      <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-2xl flex-shrink-0">
+                                        <div className="flex items-center justify-between">
+                                          <h2 className="text-2xl font-bold text-gray-900">Edit Partner Details</h2>
+                                          <button
+                                            onClick={() => setEditingPartnerId(null)}
+                                            className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full"
+                                          >
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                          </button>
                                         </div>
-                                      ))}
+                                      </div>
+                                      
+                                      <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                        <div className="p-6 space-y-8">
+                                          {/* Basic Information */}
+                                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                                </svg>
+                                              </div>
+                                              Basic Information
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="name" 
+                                                  value={editForm.name} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="phoneNumber" 
+                                                  value={editForm.phoneNumber} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                                                <select 
+                                                  name="gender" 
+                                                  value={editForm.gender} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                >
+                                                  <option value="">Select Gender</option>
+                                                  <option value="Male">Male</option>
+                                                  <option value="Female">Female</option>
+                                                  <option value="Other">Other</option>
+                                                </select>
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                                                <select 
+                                                  name="status" 
+                                                  value={editForm.status} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                >
+                                                  {/* <option value="">Select Status</option> */}
+                                                  <option value="Pending">Pending</option>
+                                                  <option value="Approved">Approved</option>
+                                                  <option value="Rejected">Rejected</option>
+                                                  {/* <option value="Active">Active</option>
+                                                  <option value="Inactive">Inactive</option> */}
+                                                </select>
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Earning Preference</label>
+                                                <select 
+                                                  name="earningPreference" 
+                                                  value={editForm.earningPreference} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                >
+                                                  <option value="">Select Preference</option>
+                                                  <option value="audio">Audio</option>
+                                                  <option value="video">Video</option>
+                                                </select>
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Spoken Languages (comma separated)</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="spokenLanguages" 
+                                                  value={editForm.spokenLanguages} 
+                                                  onChange={handleEditInput} 
+                                                  placeholder="English, Hindi, Spanish"
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Hobbies (comma separated)</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="hobbies" 
+                                                  value={editForm.hobbies} 
+                                                  onChange={handleEditInput} 
+                                                  placeholder="Reading, Swimming, Cooking"
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                                                <textarea 
+                                                  name="bio" 
+                                                  value={editForm.bio} 
+                                                  onChange={handleEditInput} 
+                                                  rows="4"
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm resize-none" 
+                                                />
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Media Files */}
+                                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                              <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                                </svg>
+                                              </div>
+                                              Media Files
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">Profile Picture</label>
+                                                <div className="space-y-4">
+                                                  {editForm.profilePicture ? (
+                                                    <div className="relative inline-block">
+                                                      <img 
+                                                        src={editForm.profilePicture} 
+                                                        alt="Profile Preview" 
+                                                        className="w-40 h-40 rounded-xl object-cover border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
+                                                        onError={(e) => {
+                                                          e.target.style.display = 'none';
+                                                        }}
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditForm(prev => ({ ...prev, profilePicture: "" }))}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow-lg"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const input = document.querySelector('input[name="profilePicture"]');
+                                                          input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                                                        }}
+                                                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                                                        title="Edit URL"
+                                                      >
+                                                        ✎
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-40 h-40 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50">
+                                                      <div className="text-center">
+                                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                                        </svg>
+                                                        <p className="text-sm text-gray-500">Add Image</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  <input 
+                                                    type="url" 
+                                                    name="profilePicture" 
+                                                    value={editForm.profilePicture} 
+                                                    onChange={handleEditInput} 
+                                                    placeholder="Enter image URL"
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                    style={{ display: editForm.profilePicture ? 'none' : 'block' }}
+                                                  />
+                                                </div>
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                                  {editForm.earningPreference === 'video' ? 'Video Intro' : 'Audio Intro'}
+                                                </label>
+                                                <div className="space-y-4">
+                                                  {editForm.audioIntro ? (
+                                                    <div className="relative">
+                                                      <div className="bg-white p-4 rounded-lg border shadow-sm">
+                                                        {editForm.earningPreference === 'video' ? (
+                                                          <video
+                                                            controls
+                                                            src={editForm.audioIntro}
+                                                            className="w-full h-32 rounded"
+                                                          />
+                                                        ) : (
+                                                          <audio
+                                                            controls
+                                                            src={editForm.audioIntro}
+                                                            className="w-full"
+                                                          />
+                                                        )}
+                                                      </div>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditForm(prev => ({ ...prev, audioIntro: "" }))}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow-lg"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const input = document.querySelector('input[name="audioIntro"]');
+                                                          input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                                                        }}
+                                                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                                                        title="Edit URL"
+                                                      >
+                                                        ✎
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50">
+                                                      <div className="text-center">
+                                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M8.464 15.536a5 5 0 010-7.072m-2.828 9.9a9 9 0 010-14.142"></path>
+                                                        </svg>
+                                                        <p className="text-sm text-gray-500">Add {editForm.earningPreference === 'video' ? 'Video' : 'Audio'}</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  <input 
+                                                    type="url" 
+                                                    name="audioIntro" 
+                                                    value={editForm.audioIntro} 
+                                                    onChange={handleEditInput} 
+                                                    placeholder={`Enter ${editForm.earningPreference === 'video' ? 'video' : 'audio'} URL`}
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                    style={{ display: editForm.audioIntro ? 'none' : 'block' }}
+                                                  />
+                                                </div>
+                                              </div>
+                                              <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">Captured Photo</label>
+                                                <div className="space-y-4">
+                                                  {editForm.capturedPhoto ? (
+                                                    <div className="relative inline-block">
+                                                      <img 
+                                                        src={editForm.capturedPhoto} 
+                                                        alt="Captured Photo Preview" 
+                                                        className="w-48 h-36 rounded-xl object-cover border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
+                                                        onError={(e) => {
+                                                          e.target.style.display = 'none';
+                                                        }}
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditForm(prev => ({ ...prev, capturedPhoto: "" }))}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow-lg"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const input = document.querySelector('input[name="capturedPhoto"]');
+                                                          input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                                                        }}
+                                                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                                                        title="Edit URL"
+                                                      >
+                                                        ✎
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-48 h-36 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50">
+                                                      <div className="text-center">
+                                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                        </svg>
+                                                        <p className="text-sm text-gray-500">Add Photo</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  <input 
+                                                    type="url" 
+                                                    name="capturedPhoto" 
+                                                    value={editForm.capturedPhoto} 
+                                                    onChange={handleEditInput} 
+                                                    placeholder="Enter image URL"
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                    style={{ display: editForm.capturedPhoto ? 'none' : 'block' }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* KYC Details */}
+                                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                              <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                                                </svg>
+                                              </div>
+                                              KYC Details
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">PAN Card Number</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="kyc.panNumber" 
+                                                  value={editForm.kyc.panNumber} 
+                                                  onChange={handleEditInput} 
+                                                  placeholder="Enter PAN number"
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">PAN Card Document</label>
+                                                <div className="space-y-4">
+                                                  {editForm.kyc.panCardFile ? (
+                                                    <div className="relative inline-block">
+                                                      <img 
+                                                        src={editForm.kyc.panCardFile} 
+                                                        alt="PAN Card Preview" 
+                                                        className="w-48 h-32 rounded-xl object-cover border-2 border-gray-200 shadow-lg cursor-pointer hover:opacity-80 transition-all hover:shadow-xl"
+                                                        onError={(e) => {
+                                                          e.target.style.display = 'none';
+                                                        }}
+                                                        onClick={() => handleShowPanModal(editForm.kyc.panCardFile)}
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditForm(prev => ({ ...prev, kyc: { ...prev.kyc, panCardFile: "" } }))}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow-lg"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const input = document.querySelector('input[name="kyc.panCardFile"]');
+                                                          input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                                                        }}
+                                                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                                                        title="Edit URL"
+                                                      >
+                                                        ✎
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-48 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50">
+                                                      <div className="text-center">
+                                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                        </svg>
+                                                        <p className="text-sm text-gray-500">Add PAN Card</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  <input 
+                                                    type="url" 
+                                                    name="kyc.panCardFile" 
+                                                    value={editForm.kyc.panCardFile} 
+                                                    onChange={handleEditInput} 
+                                                    placeholder="Enter PAN card image URL"
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                    style={{ display: editForm.kyc.panCardFile ? 'none' : 'block' }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Bank Details */}
+                                          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-100">
+                                            <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                                </svg>
+                                              </div>
+                                              Bank Details
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account Number</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="bankDetails.bankAccountNumber" 
+                                                  value={editForm.bankDetails.bankAccountNumber} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="bankDetails.accountHolderName" 
+                                                  value={editForm.bankDetails.accountHolderName} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">IFSC Code</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="bankDetails.ifscCode" 
+                                                  value={editForm.bankDetails.ifscCode} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Branch Name</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="bankDetails.branchName" 
+                                                  value={editForm.bankDetails.branchName} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
+                                                <input 
+                                                  type="text" 
+                                                  name="bankDetails.upiId" 
+                                                  value={editForm.bankDetails.upiId} 
+                                                  onChange={handleEditInput} 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-3">Cancel Cheque</label>
+                                                <div className="space-y-4">
+                                                  {editForm.bankDetails.cancelCheque ? (
+                                                    <div className="relative inline-block">
+                                                      <img 
+                                                        src={editForm.bankDetails.cancelCheque} 
+                                                        alt="Cancel Cheque Preview" 
+                                                        className="w-48 h-32 rounded-xl object-cover border-2 border-gray-200 shadow-lg cursor-pointer hover:opacity-80 transition-all hover:shadow-xl"
+                                                        onError={(e) => {
+                                                          e.target.style.display = 'none';
+                                                        }}
+                                                        onClick={() => handleShowPanModal(editForm.bankDetails.cancelCheque)}
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditForm(prev => ({ ...prev, bankDetails: { ...prev.bankDetails, cancelCheque: "" } }))}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm hover:bg-red-600 transition-colors shadow-lg"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                          const input = document.querySelector('input[name="bankDetails.cancelCheque"]');
+                                                          input.style.display = input.style.display === 'none' ? 'block' : 'none';
+                                                        }}
+                                                        className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-xs hover:bg-blue-600 transition-colors shadow-lg"
+                                                        title="Edit URL"
+                                                      >
+                                                        ✎
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="w-48 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center bg-gray-50">
+                                                      <div className="text-center">
+                                                        <svg className="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                                        </svg>
+                                                        <p className="text-sm text-gray-500">Add Cheque</p>
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                  <input 
+                                                    type="url" 
+                                                    name="bankDetails.cancelCheque" 
+                                                    value={editForm.bankDetails.cancelCheque} 
+                                                    onChange={handleEditInput} 
+                                                    placeholder="Enter cancel cheque image URL"
+                                                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
+                                                    style={{ display: editForm.bankDetails.cancelCheque ? 'none' : 'block' }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Buttons - Sticky Footer */}
+                                      <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl flex-shrink-0">
+                                        <div className="flex justify-end gap-4">
+                                          <button 
+                                            onClick={() => setEditingPartnerId(null)} 
+                                            className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button 
+                                            onClick={() => handleSaveEdit(partner._id)} 
+                                            disabled={editSaving} 
+                                            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2 shadow-lg"
+                                          >
+                                            {editSaving ? (
+                                              <>
+                                                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                                                </svg>
+                                                Saving...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                                Save Changes
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
+
+                                        {/* Success/Error Messages */}
+                                        {editSuccess && (
+                                          <div className="mt-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
+                                            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            {editSuccess}
+                                          </div>
+                                        )}
+                                        {editError && (
+                                          <div className="mt-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+                                            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                            {editError}
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="mb-2">
-                                      <label className="font-semibold">Bio:</label>
-                                      <textarea name="bio" value={editForm.bio} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
-                                    </div>
-                                    <div className="mb-2">
-                                      <label className="font-semibold">Hobbies (comma separated):</label>
-                                      <input type="text" name="hobbies" value={editForm.hobbies} onChange={handleEditInput} className="block w-full border rounded px-3 py-2 mt-1" />
-                                    </div>
-                                    <div className="flex gap-2 mt-2">
-                                      <button onClick={() => handleSaveEdit(partner._id)} disabled={editSaving} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">{editSaving ? "Saving..." : "Save"}</button>
-                                      <button onClick={() => setEditingPartnerId(null)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
-                                    </div>
-                                    {editSuccess && <div className="text-green-600 mt-2">{editSuccess}</div>}
-                                    {editError && <div className="text-red-600 mt-2">{editError}</div>}
                                   </div>
                                 ) : (
                                   <button
@@ -662,10 +1232,26 @@ export default function PartnersPage() {
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h2v2h-2v-2z" />
                                     </svg>
-                                    Edit
+                                    Edit Partner Details
                                   </button>
                                 )}
                               </div>
+                              <div className="text-center py-8 text-gray-500">
+                                <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536M9 13l6-6m2 2l-6 6m-2 2h2v2h-2v-2z"></path>
+                                </svg>
+                                <p className="text-sm">Click "Edit Partner Details" to modify partner information</p>
+                              </div>
+                            </div>
+
+                            {/* PAN Details Section */}
+                            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-blue-700 border-b pb-2">
+                                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"></path>
+                                </svg>
+                                PAN Details
+                              </h3>
                               <div className="space-y-4">
                                 <div className="flex items-center">
                                   <span className="font-medium text-gray-700 w-40">PAN Card Number:</span>
@@ -767,7 +1353,13 @@ export default function PartnersPage() {
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex flex-col col-span-1 md:col-span-2">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-700 mb-2">Earning Preference</span>
+                                  <span className="text-gray-900 bg-blue-50 px-3 py-2 rounded-lg inline-block w-fit">
+                                    {partner.earningPreference ? (partner.earningPreference.charAt(0).toUpperCase() + partner.earningPreference.slice(1)) : 'Not specified'}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col">
                                   <span className="font-medium text-gray-700 mb-2">Profile Picture</span>
                                   <div className="flex items-center gap-4">
                                     {partner.profilePicture ? (
@@ -786,24 +1378,28 @@ export default function PartnersPage() {
                                   </div>
                                 </div>
                                 <div className="flex flex-col col-span-1 md:col-span-2">
-                                  <span className="font-medium text-gray-700 mb-2">Earning Preference</span>
-                                  <span className="text-gray-900">
-                                    {partner.earningPreference ? (partner.earningPreference.charAt(0).toUpperCase() + partner.earningPreference.slice(1)) : 'Not specified'}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col col-span-1 md:col-span-2">
                                   <span className="font-medium text-gray-700 mb-2">Bio</span>
                                   <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{partner.bio || "No bio available"}</p>
                                 </div>
                                 {partner.audioIntro && (
                                   <div className="flex flex-col col-span-1 md:col-span-2">
-                                    <span className="font-medium text-gray-700 mb-2">Audio Introduction</span>
-                                    <div className="bg-gray-50 p-3 rounded-lg">
-                                      <audio
-                                        controls
-                                        src={partner.audioIntro}
-                                        className="w-full"
-                                      />
+                                    <span className="font-medium text-gray-700 mb-2">
+                                      Audio Introduction
+                                    </span>
+                                    <div>
+                                      {partner.earningPreference === 'video' ? (
+                                        <video
+                                          controls
+                                          src={partner.audioIntro}
+                                          className="w-full max-w-md h-48 rounded"
+                                        />
+                                      ) : (
+                                        <audio
+                                          controls
+                                          src={partner.audioIntro}
+                                          className="w-full"
+                                        />
+                                      )}
                                     </div>
                                   </div>
                                 )}
@@ -1100,6 +1696,48 @@ export default function PartnersPage() {
         }
         .animate-zoom-in {
           animation: zoom-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Custom Scrollbar Styles */
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: #cbd5e1 #f1f5f9;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+          transition: background 0.2s ease;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+        
+        /* Smooth scrolling */
+        .custom-scrollbar {
+          scroll-behavior: smooth;
+        }
+        
+        /* Hide URL inputs when they're empty or not focused */
+        .url-input-hidden {
+          opacity: 0.7;
+          font-size: 0.875rem;
+          color: #6b7280;
+        }
+        
+        .url-input-hidden:focus {
+          opacity: 1;
+          color: #111827;
         }
       `}</style>
     </div>

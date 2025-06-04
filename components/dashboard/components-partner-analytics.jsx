@@ -24,6 +24,11 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
     // const PAGE_SIZES = [10, 20, 30, 50, 100];
     // const [pageSize, setPageSize] = useState(PAGE_SIZES[0]);
     // const [recordsData, setRecordsData] = useState(initialRecords);
+    function convertToIST(utcString) {
+        const utcDate = new Date(utcString);
+        if (isNaN(utcDate.getTime()) || utcDate.getFullYear() === 1970) return 'N/A';
+        return utcDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+    }
     const MySwal = withReactContent(Swal);
     const cookies = new Cookies(null, { path: '/' })
     const [partnerCategory, setPartnerCategory] = useState({
@@ -503,6 +508,26 @@ function ComponentPartnerAnalytics({ analyticsData, errorMessage }) {
                                                 render: ({totalEarnings }) => <div className="flex items-center justify-center">
                                                     <span className={`font-bold p-2`}>{totalEarnings}</span>
                                                 </div>
+                                            },
+                                            {
+                                                accessor: 'createdAt',
+                                                title: 'Created At',
+                                                sortable: true,
+                                                render: ({ createdAt }) => {
+                                                    return <div className="flex items-center justify-center">
+                                                        <span className={`font-bold p-2`}>{convertToIST(createdAt)}</span>
+                                                    </div>
+                                                }
+                                            },
+                                            {
+                                                accessor: 'lastActive',
+                                                title: 'Last Active',
+                                                sortable: true,
+                                                render: ({ lastActive }) => {
+                                                    return <div className="flex items-center justify-center">
+                                                        <span className={`font-bold p-2`}>{convertToIST(lastActive)}</span>
+                                                    </div>
+                                                } 
                                             }
                                             // {
                                             //     accessor: 'category',

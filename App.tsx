@@ -82,7 +82,7 @@ function App({ children }: PropsWithChildren) {
 
     useEffect(() => {
         checkAuthentication();
-    }, [pathName]);
+    }, []);
     return (
         <div
             className={`${(themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${themeConfig.rtlClass

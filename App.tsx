@@ -1,5 +1,5 @@
 'use client';
-import { PropsWithChildren, useEffect, useState } from 'react';
+import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { IRootState } from '@/store';
 import { toggleRTL, toggleTheme, toggleMenu, toggleLayout, toggleAnimation, toggleNavbar, toggleSemidark } from '@/store/themeConfigSlice';
@@ -8,11 +8,13 @@ import { getTranslation } from '@/i18n';
 import { addUser } from './store/userSlice';
 import Cookies from 'universal-cookie';
 import { getUserProfile } from './utils';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AppProgressBar } from 'next-nprogress-bar';
+import path from 'path';
 
 function App({ children }: PropsWithChildren) {
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
+    const pathName = usePathname();
     const dispatch = useDispatch();
     const { initLocale } = getTranslation();
     const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +58,9 @@ function App({ children }: PropsWithChildren) {
             const apiData = await getUserProfile('/auth/api/team/get-team-profile', cookies.get('access_token'), cookies.get('token'))
             if (apiData.success) {
                 dispatch(addUser(apiData.data))
+                if(apiData.data.role == ''){
+                    router.replace('/pages/error401');
+                }
             } else {
                 dispatch(addUser(null));
                 cookies.remove('access_token');
@@ -77,7 +82,7 @@ function App({ children }: PropsWithChildren) {
 
     useEffect(() => {
         checkAuthentication();
-    }, [])
+    }, [pathName]);
     return (
         <div
             className={`${(themeConfig.sidebar && 'toggle-sidebar') || ''} ${themeConfig.menu} ${themeConfig.layout} ${themeConfig.rtlClass

@@ -45,12 +45,22 @@ export default function PartnersPage() {
   const [showPanModal, setShowPanModal] = useState(false);
   const [modalPanCard, setModalPanCard] = useState(null);
   const [search, setSearch] = useState("");
+  const [searchFilters, setSearchFilters] = useState({
+    name: "",
+    phone: ""
+  });
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [activeSearchFilters, setActiveSearchFilters] = useState({
+    name: "",
+    phone: ""
+  });
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const [notification, setNotification] = useState(null);
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [actionPartnerId, setActionPartnerId] = useState(null);
   const [actionNote, setActionNote] = useState("");
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [partnersPerPage] = useState(10); // Default to 10 partners per page
@@ -58,6 +68,9 @@ export default function PartnersPage() {
 
   // Add a new state for action loading
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Add separate loading state for search
+  const [searchLoading, setSearchLoading] = useState(false);
 
   // Add state for profile picture modal
   const [showProfilePicModal, setShowProfilePicModal] = useState(false);
@@ -70,11 +83,16 @@ export default function PartnersPage() {
   const [editSuccess, setEditSuccess] = useState("");
   const [editError, setEditError] = useState("");
 
-  const fetchPartners = () => {
+  const fetchPartners = (searchQuery = "") => {
     setLoading(true);
-    // Include pagination parameters in the API URL
-    const apiUrl = `https://battein-onboard-brown.vercel.app/api/partners?page=${currentPage}&limit=${partnersPerPage}`;
+    // Include pagination and search parameters in the API URL
+    let apiUrl = `https://battein-onboard-brown.vercel.app/api/partners?page=${currentPage}&limit=${partnersPerPage}`;
     
+    // Add search parameter if provided
+    if (searchQuery.trim()) {
+      apiUrl += `&search=${encodeURIComponent(searchQuery.trim())}`;
+    }
+
     fetch(apiUrl)
       .then((res) => res.json())
       .then((data) => {
@@ -82,8 +100,9 @@ export default function PartnersPage() {
         setPartners(data.partners || []);
         setTotalPartners(data.pagination?.total || data.partners?.length || 0);
         setLoading(false);
-        
-        if (data.partners?.length > 0) {
+
+        // Don't show search notifications here - we'll handle them after filtering
+        if (!searchQuery.trim() && data.partners?.length > 0) {
           setNotification({
             type: "success",
             message: `${data.partners.length} partners loaded successfully`
@@ -97,9 +116,54 @@ export default function PartnersPage() {
       });
   };
 
+  // Fetch all partners for search (without pagination)
+  const fetchAllPartnersForSearch = () => {
+    setSearchLoading(true);
+    // Clear any existing notifications to prevent error notifications during search
+    setNotification(null);
+    
+    // Fetch all partners without pagination for search
+    const apiUrl = `https://battein-onboard-brown.vercel.app/api/partners?limit=1000`; // Large limit to get all partners
+
+    fetch(apiUrl)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("All partners fetched for search:", data.partners?.length || 0);
+        setPartners(data.partners || []);
+        setTotalPartners(data.pagination?.total || data.partners?.length || 0);
+        setSearchLoading(false);
+        
+        // Trigger search result notification immediately
+        triggerSearchNotification(data.partners || []);
+      })
+      .catch((err) => {
+        console.error("Error fetching all partners for search:", err);
+        setNotification({
+          type: "error",
+          message: "Failed to fetch partners for search"
+        });
+        setSearchLoading(false);
+      });
+  };
+
   useEffect(() => {
-    fetchPartners();
-  }, [currentPage]); // Add currentPage as a dependency to refetch when page changes
+    // Only fetch paginated partners if search is not active
+    if (!isSearchActive) {
+      fetchPartners(search);
+    }
+  }, [currentPage, isSearchActive]); // Add currentPage as a dependency to refetch when page changes
+
+  // Separate effect for search to reset to page 1 when searching
+  useEffect(() => {
+    // Only handle this if search is not active (for the old search functionality)
+    if (!isSearchActive) {
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchPartners(search);
+      }
+    }
+  }, [search, isSearchActive]); // Trigger search when search term changes
 
   useEffect(() => {
     if (notification) {
@@ -110,9 +174,111 @@ export default function PartnersPage() {
     }
   }, [notification]);
 
+  // Function to trigger search notifications
+  const triggerSearchNotification = (partnersData) => {
+    const hasActiveFilters = activeSearchFilters.name.trim() || activeSearchFilters.phone.trim();
+
+    if (hasActiveFilters) {
+      const activeFilters = [];
+      if (activeSearchFilters.name.trim()) activeFilters.push(`name: "${activeSearchFilters.name}"`);
+      if (activeSearchFilters.phone.trim()) activeFilters.push(`phone: "${activeSearchFilters.phone}"`);
+
+      // Filter the partners data directly
+      let filtered = partnersData;
+      if (activeSearchFilters.name.trim()) {
+        filtered = filtered.filter((partner) => {
+          const name = (partner.name || "").toLowerCase();
+          return name.includes(activeSearchFilters.name.toLowerCase());
+        });
+      }
+      if (activeSearchFilters.phone.trim()) {
+        filtered = filtered.filter((partner) => {
+          const phone = (partner.phoneNumber || partner.kyc?.phone || "").replace(/\s+/g, "");
+          return phone.includes(activeSearchFilters.phone.replace(/\s+/g, ""));
+        });
+      }
+
+      if (filtered.length > 0) {
+        setNotification({
+          type: "success",
+          message: `Found ${filtered.length} partner(s) matching filters: ${activeFilters.join(", ")}`
+        });
+      } else {
+        setNotification({
+          type: "info",
+          message: `No partners found matching filters: ${activeFilters.join(", ")}`
+        });
+      }
+    }
+  };
+
+  // Handle advanced search form submission
+  const handleAdvancedSearch = () => {
+    // Clear any existing notifications first
+    setNotification(null);
+    
+    // Clear partners immediately when search starts
+    setPartners([]);
+    
+    // Set active search filters to current search filters
+    setActiveSearchFilters({
+      name: searchFilters.name,
+      phone: searchFilters.phone
+    });
+    setIsSearchActive(true);
+    
+    // Clear general search when using advanced search
+    setSearch("");
+    setShowAdvancedSearch(true);
+    
+    // Reset to first page
+    setCurrentPage(1);
+    
+    // Fetch all partners for search (without pagination)
+    fetchAllPartnersForSearch();
+  };
+
+  // Handle clearing advanced search
+  const handleClearAdvancedSearch = () => {
+    setSearchFilters({
+      name: "",
+      phone: ""
+    });
+    setActiveSearchFilters({
+      name: "",
+      phone: ""
+    });
+    setIsSearchActive(false);
+    setShowAdvancedSearch(false);
+    setSearch("");
+    
+    // Reset to page 1 and fetch paginated partners
+    setCurrentPage(1);
+    
+    setNotification({
+      type: "success",
+      message: "Filters cleared - showing all partners"
+    });
+    
+    // Fetch paginated partners again
+    setTimeout(() => {
+      fetchPartners();
+    }, 100);
+  };
+
+  // Handle advanced search input changes
+  const handleAdvancedSearchInput = (field, value) => {
+    setSearchFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Helper to get avatar URL
   const getAvatarUrl = (partner) => {
     if (partner.avatarUrl) return partner.avatarUrl;
+    if (partner.profilePicture) return partner.profilePicture;
+    if (partner.capturedPhoto) return partner.capturedPhoto;
     // Use random avatar API (e.g., DiceBear Avatars)
     const name = partner.bankDetails?.accountHolderName || "Partner";
     return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
@@ -152,7 +318,7 @@ export default function PartnersPage() {
     setLoading(true);
     try {
       await approvePartner(actionPartnerId, actionNote);
-      fetchPartners();
+      fetchPartners(search); // Preserve search term
       setShowApproveModal(false);
       setNotification({
         type: "success",
@@ -175,7 +341,7 @@ export default function PartnersPage() {
     try {
       await rejectPartner(actionPartnerId, actionNote);
       await deletePartner(actionPartnerId);
-      fetchPartners();
+      fetchPartners(search); // Preserve search term
       setShowRejectModal(false);
       setNotification({
         type: "success",
@@ -192,12 +358,43 @@ export default function PartnersPage() {
     }
   };
 
-  // Filter partners by phone number (client-side search, but only on current page)
-  const filteredPartners = partners.filter((partner) => {
-    const phone = (partner.phoneNumber || partner.kyc?.phone || "").replace(/\s+/g, "").toLowerCase();
-    const searchValue = search.replace(/\s+/g, "").toLowerCase();
-    return phone.includes(searchValue);
-  });
+  // Function to filter partners - only applies active search filters
+  const getFilteredPartners = () => {
+    let filtered = partners;
+
+    // Only apply search filters if search is active
+    if (isSearchActive) {
+      // Apply active search filters
+      const hasActiveFilters = activeSearchFilters.name.trim() || activeSearchFilters.phone.trim();
+      if (hasActiveFilters) {
+        filtered = filtered.filter((partner) => {
+          let matches = true;
+
+          // Filter by name
+          if (activeSearchFilters.name.trim()) {
+            const name = (partner.name || "").toLowerCase();
+            matches = matches && name.includes(activeSearchFilters.name.toLowerCase());
+          }
+
+          // Filter by phone
+          if (activeSearchFilters.phone.trim()) {
+            const phone = (partner.phoneNumber || partner.kyc?.phone || "").replace(/\s+/g, "");
+            matches = matches && phone.includes(activeSearchFilters.phone.replace(/\s+/g, ""));
+          }
+
+          return matches;
+        });
+      }
+    }
+
+    return filtered;
+  };
+
+  // Backend doesn't support search, so we filter on frontend as fallback
+  const filteredPartners = getFilteredPartners();
+
+  // When search is active, show all results; otherwise use pagination
+  const displayedPartners = isSearchActive ? filteredPartners : filteredPartners;
 
   // Calculate totalPages from totalPartners and partnersPerPage
   const totalPages = Math.ceil(totalPartners / partnersPerPage);
@@ -218,14 +415,14 @@ export default function PartnersPage() {
         panNumber: partner.kyc?.panNumber || "",
         panCardFile: partner.kyc?.panCardFile || "",
       },
-      bankDetails: partner.bankDetails ? { 
+      bankDetails: partner.bankDetails ? {
         bankAccountNumber: partner.bankDetails.bankAccountNumber || "",
         accountHolderName: partner.bankDetails.accountHolderName || "",
         ifscCode: partner.bankDetails.ifscCode || "",
         branchName: partner.bankDetails.branchName || "",
         upiId: partner.bankDetails.upiId || "",
         cancelCheque: partner.bankDetails.cancelCheque || "",
-        ...partner.bankDetails 
+        ...partner.bankDetails
       } : {
         bankAccountNumber: "",
         accountHolderName: "",
@@ -271,7 +468,7 @@ export default function PartnersPage() {
         bio: editForm.bio,
         audioIntro: editForm.audioIntro,
         profilePicture: editForm.profilePicture,
-        kyc: { 
+        kyc: {
           panNumber: editForm.kyc.panNumber,
           panCardFile: editForm.kyc.panCardFile,
         },
@@ -309,29 +506,39 @@ export default function PartnersPage() {
   if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-all transform animate-slide-in ${notification.type === "success" ? "bg-green-100 text-green-800 border-l-4 border-green-500" :
-            "bg-red-100 text-red-800 border-l-4 border-red-500"
+        <div className={`fixed top-4 right-4 left-4 sm:left-auto z-50 px-4 sm:px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 transition-all transform animate-slide-in ${
+          notification.type === "success" ? "bg-green-100 text-green-800 border-l-4 border-green-500" :
+          notification.type === "info" ? "bg-blue-100 text-blue-800 border-l-4 border-blue-500" :
+          "bg-red-100 text-red-800 border-l-4 border-red-500"
           }`}>
-          <div className={`p-2 rounded-full ${notification.type === "success" ? "bg-green-200" : "bg-red-200"}`}>
+          <div className={`p-2 rounded-full ${
+            notification.type === "success" ? "bg-green-200" : 
+            notification.type === "info" ? "bg-blue-200" : 
+            "bg-red-200"
+          }`}>
             {notification.type === "success" ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
               </svg>
+            ) : notification.type === "info" ? (
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
             )}
           </div>
-          <div>{notification.message}</div>
+          <div className="text-sm sm:text-base">{notification.message}</div>
           <button
             onClick={() => setNotification(null)}
-            className="ml-4 text-gray-500 hover:text-gray-700"
+            className="ml-2 sm:ml-4 text-gray-500 hover:text-gray-700"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
           </button>
@@ -339,64 +546,81 @@ export default function PartnersPage() {
       )}
 
       {/* Header Section */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2 text-blue-900">Partners Management</h1>
-        <p className="text-gray-600">Review and manage partner applications</p>
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-blue-900">Partners Management</h1>
+        <p className="text-sm sm:text-base text-gray-600">Review and manage partner applications</p>
       </div>
 
       {/* Search Section */}
-      <div className="mb-6 p-4 bg-white rounded-xl shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-grow max-w-md">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-white rounded-xl shadow-sm">
+        {/* Active Search Status */}
+        {isSearchActive && (activeSearchFilters.name || activeSearchFilters.phone) && (
+          <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
+                <span className="text-sm text-blue-700">
+                  Active filters: {[
+                    activeSearchFilters.name && `Name: "${activeSearchFilters.name}"`,
+                    activeSearchFilters.phone && `Phone: "${activeSearchFilters.phone}"`
+                  ].filter(Boolean).join(", ")}
+                </span>
             </div>
-            <input
-              type="text"
-              placeholder="Search by phone number..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-10 w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-            />
-            {search && (
               <button
-                onClick={() => setSearch("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                  onClick={handleClearAdvancedSearch}
+                  className="text-blue-600 hover:text-blue-800 text-sm underline"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+                  Clear All
               </button>
-            )}
+            </div>
           </div>
-          <div className="flex gap-2">
+        )}
+        {/* Search Filters - Always Visible */}
+        <div className="space-y-4">
+          {/* Search Fields - Name and Phone Number */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+              <input
+                type="text"
+                placeholder="Name ...."
+                value={searchFilters.name}
+                onChange={e => handleAdvancedSearchInput('name', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+          </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+              <input
+                type="text"
+                placeholder="Phone number ...."
+                value={searchFilters.phone}
+                onChange={e => handleAdvancedSearchInput('phone', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Search Button */}
+          <div className="flex justify-center">
             <button
-              onClick={fetchPartners}
-              className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex items-center gap-2"
+              onClick={handleAdvancedSearch}
+              disabled={(!searchFilters.name.trim() && !searchFilters.phone.trim()) || searchLoading}
+              className={`px-8 py-2 rounded-lg transition-colors font-medium ${
+                (searchFilters.name.trim() || searchFilters.phone.trim()) && !searchLoading
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
-              Refresh
+              Search
             </button>
           </div>
         </div>
       </div>
 
-      {/* Loading Overlay */}
-      {loading && partners.length > 0 && (
-        <div className="fixed inset-0 bg-black bg-opacity-20 flex items-center justify-center z-40">
-          <div className="bg-white p-6 rounded-lg shadow-lg flex items-center gap-4">
-            <svg className="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-            <span>Processing...</span>
-          </div>
-        </div>
-      )}
+
 
       {/* Add spinner overlay for actionLoading */}
       {actionLoading && (
@@ -411,8 +635,8 @@ export default function PartnersPage() {
         </div>
       )}
 
-      {/* Partners Table */}
-      <div className="overflow-hidden bg-white rounded-2xl shadow-lg">
+      {/* Partners Table - Desktop */}
+      <div className="hidden lg:block overflow-hidden bg-white rounded-2xl shadow-lg">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
@@ -424,7 +648,7 @@ export default function PartnersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {filteredPartners.map((partner) => (
+            {displayedPartners.map((partner) => (
               <>
                 <tr key={partner._id} className="hover:bg-blue-50 transition-all group">
                   <td className="px-6 py-4">
@@ -449,10 +673,10 @@ export default function PartnersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'Approved'
-                        ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
-                        : partner.status === 'Rejected'
-                          ? 'bg-red-100 text-red-800 ring-1 ring-red-600/20'
-                          : 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20'
+                      ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
+                      : partner.status === 'Rejected'
+                        ? 'bg-red-100 text-red-800 ring-1 ring-red-600/20'
+                        : 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20'
                       }`}>
                       {partner.status === 'Approved' && (
                         <svg className="mr-1.5 h-2 w-2 text-green-600" fill="currentColor" viewBox="0 0 8 8">
@@ -522,10 +746,10 @@ export default function PartnersPage() {
                               </div>
                               <div className="mt-4 md:mt-0 flex md:flex-col gap-3 flex-wrap">
                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'Approved'
-                                    ? 'bg-green-100 text-green-800'
-                                    : partner.status === 'Rejected'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-green-100 text-green-800'
+                                  : partner.status === 'Rejected'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
                                   }`}>
                                   {partner.status || "Pending"}
                                 </span>
@@ -558,7 +782,128 @@ export default function PartnersPage() {
                           </div>
 
                           {/* Tabs Content */}
-                          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="p-6 space-y-6">
+                            {/* Additional Info */}
+                            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-blue-700 border-b pb-2">
+                                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                Additional Information
+                              </h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-700 mb-2">Spoken Language</span>
+                                  {Array.isArray(partner.spokenLanguages) && partner.spokenLanguages.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {partner.spokenLanguages.map((lang, idx) => (
+                                        <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                          {lang}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500">Not specified</span>
+                                  )}
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-700 mb-2">Hobbies</span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {Array.isArray(partner.hobbies) && partner.hobbies.length > 0 ? (
+                                      partner.hobbies.map((hobby, index) => (
+                                        <span key={index} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                                          {hobby}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-gray-500">Not specified</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-700 mb-2">Earning Preference</span>
+                                  <span className="text-gray-900 bg-blue-50 px-3 py-2 rounded-lg inline-block w-fit">
+                                    {partner.earningPreference ? (partner.earningPreference.charAt(0).toUpperCase() + partner.earningPreference.slice(1)) : 'Not specified'}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <div className="flex items-start gap-8">
+                                    {partner.profilePicture ? (
+                                      <>
+                                        <div className="text-center">
+                                          <span className="font-medium text-gray-700 mb-2 block">Profile Picture</span>
+                                          <img
+                                            src={partner.profilePicture}
+                                            alt="Profile"
+                                            className="w-24 h-24 rounded-full object-cover border shadow cursor-pointer transition-transform hover:scale-105"
+                                            onClick={() => {
+                                              setModalProfilePic(partner.profilePicture);
+                                              setShowProfilePicModal(true);
+                                            }}
+                                          />
+                                        </div>
+                                        
+                                        {partner.earningPreference === 'video' && partner.capturedPhoto && (
+                                          <div className="text-center">
+                                            <span className="font-medium text-gray-700 mb-2 block">Captured Image</span>
+                                            <img
+                                              src={partner.capturedPhoto}
+                                              alt="Captured"
+                                              className="w-24 h-24 rounded-full object-cover border shadow cursor-pointer transition-transform hover:scale-105"
+                                              onClick={() => {
+                                                setModalProfilePic(partner.capturedPhoto);
+                                                setShowProfilePicModal(true);
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+                                      </>
+                                    ) : partner.capturedPhoto ? (
+                                      <div className="text-center">
+                                        <span className="font-medium text-gray-700 mb-2 block">Captured Image</span>
+                                        <img
+                                          src={partner.capturedPhoto}
+                                          alt="Captured"
+                                          className="w-24 h-24 rounded-full object-cover border shadow cursor-pointer transition-transform hover:scale-105"
+                                          onClick={() => {
+                                            setModalProfilePic(partner.capturedPhoto);
+                                            setShowProfilePicModal(true);
+                                          }}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-500">No profile picture</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col col-span-1 md:col-span-2">
+                                  <span className="font-medium text-gray-700 mb-2">Bio</span>
+                                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{partner.bio || "No bio available"}</p>
+                                </div>
+                                {partner.audioIntro && (
+                                  <div className="flex flex-col col-span-1 md:col-span-2">
+                                    <span className="font-medium text-gray-700 mb-2">
+                                      {partner.earningPreference === 'video' ? 'Audio Introduction' : 'Audio Introduction'}
+                                    </span>
+                                    {partner.earningPreference === 'video' ? (
+                                      <video
+                                        controls
+                                        src={partner.audioIntro}
+                                        className="w-full max-w-md h-48 rounded"
+                                      />
+                                    ) : (
+                                      <audio
+                                        controls
+                                        src={partner.audioIntro}
+                                        className="w-full"
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Edit Partner Section */}
                             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-blue-700 border-b pb-2">
@@ -584,7 +929,7 @@ export default function PartnersPage() {
                                           </button>
                                         </div>
                                       </div>
-                                      
+
                                       <div className="flex-1 overflow-y-auto custom-scrollbar">
                                         <div className="p-6 space-y-8">
                                           {/* Basic Information */}
@@ -600,30 +945,30 @@ export default function PartnersPage() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="name" 
-                                                  value={editForm.name} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="name"
+                                                  value={editForm.name}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="phoneNumber" 
-                                                  value={editForm.phoneNumber} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="phoneNumber"
+                                                  value={editForm.phoneNumber}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
-                                                <select 
-                                                  name="gender" 
-                                                  value={editForm.gender} 
-                                                  onChange={handleEditInput} 
+                                                <select
+                                                  name="gender"
+                                                  value={editForm.gender}
+                                                  onChange={handleEditInput}
                                                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 >
                                                   <option value="">Select Gender</option>
@@ -634,10 +979,10 @@ export default function PartnersPage() {
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                                                <select 
-                                                  name="status" 
-                                                  value={editForm.status} 
-                                                  onChange={handleEditInput} 
+                                                <select
+                                                  name="status"
+                                                  value={editForm.status}
+                                                  onChange={handleEditInput}
                                                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 >
                                                   {/* <option value="">Select Status</option> */}
@@ -650,10 +995,10 @@ export default function PartnersPage() {
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Earning Preference</label>
-                                                <select 
-                                                  name="earningPreference" 
-                                                  value={editForm.earningPreference} 
-                                                  onChange={handleEditInput} 
+                                                <select
+                                                  name="earningPreference"
+                                                  value={editForm.earningPreference}
+                                                  onChange={handleEditInput}
                                                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 >
                                                   <option value="">Select Preference</option>
@@ -663,34 +1008,34 @@ export default function PartnersPage() {
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Spoken Languages (comma separated)</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="spokenLanguages" 
-                                                  value={editForm.spokenLanguages} 
-                                                  onChange={handleEditInput} 
+                                                <input
+                                                  type="text"
+                                                  name="spokenLanguages"
+                                                  value={editForm.spokenLanguages}
+                                                  onChange={handleEditInput}
                                                   placeholder="English, Hindi, Spanish"
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Hobbies (comma separated)</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="hobbies" 
-                                                  value={editForm.hobbies} 
-                                                  onChange={handleEditInput} 
+                                                <input
+                                                  type="text"
+                                                  name="hobbies"
+                                                  value={editForm.hobbies}
+                                                  onChange={handleEditInput}
                                                   placeholder="Reading, Swimming, Cooking"
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
-                                                <textarea 
-                                                  name="bio" 
-                                                  value={editForm.bio} 
-                                                  onChange={handleEditInput} 
+                                                <textarea
+                                                  name="bio"
+                                                  value={editForm.bio}
+                                                  onChange={handleEditInput}
                                                   rows="4"
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm resize-none" 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm resize-none"
                                                 />
                                               </div>
                                             </div>
@@ -712,9 +1057,9 @@ export default function PartnersPage() {
                                                 <div className="space-y-4">
                                                   {editForm.profilePicture ? (
                                                     <div className="relative inline-block">
-                                                      <img 
-                                                        src={editForm.profilePicture} 
-                                                        alt="Profile Preview" 
+                                                      <img
+                                                        src={editForm.profilePicture}
+                                                        alt="Profile Preview"
                                                         className="w-40 h-40 rounded-xl object-cover border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
                                                         onError={(e) => {
                                                           e.target.style.display = 'none';
@@ -749,11 +1094,11 @@ export default function PartnersPage() {
                                                       </div>
                                                     </div>
                                                   )}
-                                                  <input 
-                                                    type="url" 
-                                                    name="profilePicture" 
-                                                    value={editForm.profilePicture} 
-                                                    onChange={handleEditInput} 
+                                                  <input
+                                                    type="url"
+                                                    name="profilePicture"
+                                                    value={editForm.profilePicture}
+                                                    onChange={handleEditInput}
                                                     placeholder="Enter image URL"
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                     style={{ display: editForm.profilePicture ? 'none' : 'block' }}
@@ -811,11 +1156,11 @@ export default function PartnersPage() {
                                                       </div>
                                                     </div>
                                                   )}
-                                                  <input 
-                                                    type="url" 
-                                                    name="audioIntro" 
-                                                    value={editForm.audioIntro} 
-                                                    onChange={handleEditInput} 
+                                                  <input
+                                                    type="url"
+                                                    name="audioIntro"
+                                                    value={editForm.audioIntro}
+                                                    onChange={handleEditInput}
                                                     placeholder={`Enter ${editForm.earningPreference === 'video' ? 'video' : 'audio'} URL`}
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                     style={{ display: editForm.audioIntro ? 'none' : 'block' }}
@@ -827,9 +1172,9 @@ export default function PartnersPage() {
                                                 <div className="space-y-4">
                                                   {editForm.capturedPhoto ? (
                                                     <div className="relative inline-block">
-                                                      <img 
-                                                        src={editForm.capturedPhoto} 
-                                                        alt="Captured Photo Preview" 
+                                                      <img
+                                                        src={editForm.capturedPhoto}
+                                                        alt="Captured Photo Preview"
                                                         className="w-48 h-36 rounded-xl object-cover border-2 border-gray-200 shadow-lg hover:shadow-xl transition-shadow"
                                                         onError={(e) => {
                                                           e.target.style.display = 'none';
@@ -865,11 +1210,11 @@ export default function PartnersPage() {
                                                       </div>
                                                     </div>
                                                   )}
-                                                  <input 
-                                                    type="url" 
-                                                    name="capturedPhoto" 
-                                                    value={editForm.capturedPhoto} 
-                                                    onChange={handleEditInput} 
+                                                  <input
+                                                    type="url"
+                                                    name="capturedPhoto"
+                                                    value={editForm.capturedPhoto}
+                                                    onChange={handleEditInput}
                                                     placeholder="Enter image URL"
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                     style={{ display: editForm.capturedPhoto ? 'none' : 'block' }}
@@ -892,13 +1237,13 @@ export default function PartnersPage() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">PAN Card Number</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="kyc.panNumber" 
-                                                  value={editForm.kyc.panNumber} 
-                                                  onChange={handleEditInput} 
+                                                <input
+                                                  type="text"
+                                                  name="kyc.panNumber"
+                                                  value={editForm.kyc.panNumber}
+                                                  onChange={handleEditInput}
                                                   placeholder="Enter PAN number"
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
@@ -906,9 +1251,9 @@ export default function PartnersPage() {
                                                 <div className="space-y-4">
                                                   {editForm.kyc.panCardFile ? (
                                                     <div className="relative inline-block">
-                                                      <img 
-                                                        src={editForm.kyc.panCardFile} 
-                                                        alt="PAN Card Preview" 
+                                                      <img
+                                                        src={editForm.kyc.panCardFile}
+                                                        alt="PAN Card Preview"
                                                         className="w-48 h-32 rounded-xl object-cover border-2 border-gray-200 shadow-lg cursor-pointer hover:opacity-80 transition-all hover:shadow-xl"
                                                         onError={(e) => {
                                                           e.target.style.display = 'none';
@@ -944,11 +1289,11 @@ export default function PartnersPage() {
                                                       </div>
                                                     </div>
                                                   )}
-                                                  <input 
-                                                    type="url" 
-                                                    name="kyc.panCardFile" 
-                                                    value={editForm.kyc.panCardFile} 
-                                                    onChange={handleEditInput} 
+                                                  <input
+                                                    type="url"
+                                                    name="kyc.panCardFile"
+                                                    value={editForm.kyc.panCardFile}
+                                                    onChange={handleEditInput}
                                                     placeholder="Enter PAN card image URL"
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                     style={{ display: editForm.kyc.panCardFile ? 'none' : 'block' }}
@@ -971,52 +1316,52 @@ export default function PartnersPage() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Bank Account Number</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="bankDetails.bankAccountNumber" 
-                                                  value={editForm.bankDetails.bankAccountNumber} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="bankDetails.bankAccountNumber"
+                                                  value={editForm.bankDetails.bankAccountNumber}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Account Holder Name</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="bankDetails.accountHolderName" 
-                                                  value={editForm.bankDetails.accountHolderName} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="bankDetails.accountHolderName"
+                                                  value={editForm.bankDetails.accountHolderName}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">IFSC Code</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="bankDetails.ifscCode" 
-                                                  value={editForm.bankDetails.ifscCode} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="bankDetails.ifscCode"
+                                                  value={editForm.bankDetails.ifscCode}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">Branch Name</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="bankDetails.branchName" 
-                                                  value={editForm.bankDetails.branchName} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="bankDetails.branchName"
+                                                  value={editForm.bankDetails.branchName}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">UPI ID</label>
-                                                <input 
-                                                  type="text" 
-                                                  name="bankDetails.upiId" 
-                                                  value={editForm.bankDetails.upiId} 
-                                                  onChange={handleEditInput} 
-                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm" 
+                                                <input
+                                                  type="text"
+                                                  name="bankDetails.upiId"
+                                                  value={editForm.bankDetails.upiId}
+                                                  onChange={handleEditInput}
+                                                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                 />
                                               </div>
                                               <div>
@@ -1024,9 +1369,9 @@ export default function PartnersPage() {
                                                 <div className="space-y-4">
                                                   {editForm.bankDetails.cancelCheque ? (
                                                     <div className="relative inline-block">
-                                                      <img 
-                                                        src={editForm.bankDetails.cancelCheque} 
-                                                        alt="Cancel Cheque Preview" 
+                                                      <img
+                                                        src={editForm.bankDetails.cancelCheque}
+                                                        alt="Cancel Cheque Preview"
                                                         className="w-48 h-32 rounded-xl object-cover border-2 border-gray-200 shadow-lg cursor-pointer hover:opacity-80 transition-all hover:shadow-xl"
                                                         onError={(e) => {
                                                           e.target.style.display = 'none';
@@ -1062,11 +1407,11 @@ export default function PartnersPage() {
                                                       </div>
                                                     </div>
                                                   )}
-                                                  <input 
-                                                    type="url" 
-                                                    name="bankDetails.cancelCheque" 
-                                                    value={editForm.bankDetails.cancelCheque} 
-                                                    onChange={handleEditInput} 
+                                                  <input
+                                                    type="url"
+                                                    name="bankDetails.cancelCheque"
+                                                    value={editForm.bankDetails.cancelCheque}
+                                                    onChange={handleEditInput}
                                                     placeholder="Enter cancel cheque image URL"
                                                     className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
                                                     style={{ display: editForm.bankDetails.cancelCheque ? 'none' : 'block' }}
@@ -1081,15 +1426,15 @@ export default function PartnersPage() {
                                       {/* Action Buttons - Sticky Footer */}
                                       <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 rounded-b-2xl flex-shrink-0">
                                         <div className="flex justify-end gap-4">
-                                          <button 
-                                            onClick={() => setEditingPartnerId(null)} 
+                                          <button
+                                            onClick={() => setEditingPartnerId(null)}
                                             className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                                           >
                                             Cancel
                                           </button>
-                                          <button 
-                                            onClick={() => handleSaveEdit(partner._id)} 
-                                            disabled={editSaving} 
+                                          <button
+                                            onClick={() => handleSaveEdit(partner._id)}
+                                            disabled={editSaving}
                                             className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2 shadow-lg"
                                           >
                                             {editSaving ? (
@@ -1221,97 +1566,9 @@ export default function PartnersPage() {
                                   </div>
                                 )}
                               </div>
-                            </div>
-
-                            {/* Additional Info */}
-                            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow col-span-1 lg:col-span-2">
-                              <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-blue-700 border-b pb-2">
-                                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                </svg>
-                                Additional Information
-                              </h3>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-700 mb-2">Spoken Language</span>
-                                  {Array.isArray(partner.spokenLanguages) && partner.spokenLanguages.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                      {partner.spokenLanguages.map((lang, idx) => (
-                                        <span key={idx} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                                          {lang}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-500">Not specified</span>
-                                  )}
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-700 mb-2">Hobbies</span>
-                                  <div className="flex flex-wrap gap-2">
-                                    {Array.isArray(partner.hobbies) && partner.hobbies.length > 0 ? (
-                                      partner.hobbies.map((hobby, index) => (
-                                        <span key={index} className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                                          {hobby}
-                                        </span>
-                                      ))
-                                    ) : (
-                                      <span className="text-gray-500">Not specified</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-700 mb-2">Earning Preference</span>
-                                  <span className="text-gray-900 bg-blue-50 px-3 py-2 rounded-lg inline-block w-fit">
-                                    {partner.earningPreference ? (partner.earningPreference.charAt(0).toUpperCase() + partner.earningPreference.slice(1)) : 'Not specified'}
-                                  </span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-medium text-gray-700 mb-2">Profile Picture</span>
-                                  <div className="flex items-center gap-4">
-                                    {partner.profilePicture ? (
-                                      <img
-                                        src={partner.profilePicture}
-                                        alt="Profile"
-                                        className="w-24 h-24 rounded-full object-cover border shadow cursor-pointer transition-transform hover:scale-105"
-                                        onClick={() => {
-                                          setModalProfilePic(partner.profilePicture);
-                                          setShowProfilePicModal(true);
-                                        }}
-                                      />
-                                    ) : (
-                                      <span className="text-gray-500">No profile picture</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex flex-col col-span-1 md:col-span-2">
-                                  <span className="font-medium text-gray-700 mb-2">Bio</span>
-                                  <p className="text-gray-800 bg-gray-50 p-3 rounded-lg">{partner.bio || "No bio available"}</p>
-                                </div>
-                                {partner.audioIntro && (
-                                  <div className="flex flex-col col-span-1 md:col-span-2">
-                                    <span className="font-medium text-gray-700 mb-2">
-                                      Audio Introduction
-                                    </span>
-                                    <div>
-                                      {partner.earningPreference === 'video' ? (
-                                        <video
-                                          controls
-                                          src={partner.audioIntro}
-                                          className="w-full max-w-md h-48 rounded"
-                                        />
-                                      ) : (
-                                        <audio
-                                          controls
-                                          src={partner.audioIntro}
-                                          className="w-full"
-                                        />
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
                               </div>
                             </div>
+
                           </div>
                         </div>
                       </div>
@@ -1325,30 +1582,431 @@ export default function PartnersPage() {
         {filteredPartners.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 bg-white">
             <div className="bg-blue-50 p-4 rounded-full mb-6">
-              <svg className="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No partners found</h3>
-            <p className="text-gray-500 text-center max-w-md">
-              {search ? "Try changing your search criteria or clear the search box" : "There are no partners in the system yet"}
+              {searchLoading ? (
+                <svg className="animate-spin w-16 h-16 text-blue-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              ) : (
+                <svg className="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              )}
+                                    </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              {searchLoading ? "Searching..." : "No partners found"}
+            </h3>
+            <p className="text-gray-500 text-center max-w-md mb-4">
+              {search ? (
+                <>
+                  No partners found for "<strong>{search}</strong>" on page {currentPage}
+                  {Math.ceil(totalPartners / partnersPerPage) > 1 && (
+                    <span className="block mt-2">
+                      Try searching on other pages or modify your search terms
+                    </span>
+                  )}
+                </>
+              ) : (
+                "There are no partners in the system yet"
+              )}
             </p>
             {search && (
+              <div className="flex flex-col sm:flex-row gap-2 items-center">
+                <button
+                  onClick={() => setSearch("")}
+                  className="px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                >
+                  Clear search
+                </button>
+                {Math.ceil(totalPartners / partnersPerPage) > 1 && (
+                  <div className="flex gap-2">
+                    {currentPage > 1 && (
+                      <button
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className="px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                      >
+                        ← Page {currentPage - 1}
+                      </button>
+                    )}
+                    {currentPage < Math.ceil(totalPartners / partnersPerPage) && (
+                      <button
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className="px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                      >
+                        Page {currentPage + 1} →
+                      </button>
+                                  )}
+                                </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Partners Cards - Mobile/Tablet */}
+      <div className="lg:hidden space-y-4">
+        {displayedPartners.map((partner) => (
+          <div key={partner._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {/* Card Header */}
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-blue-200 shadow-sm">
+                    <img
+                      src={getAvatarUrl(partner)}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-blue-900 text-sm sm:text-base">{getPartnerName(partner)}</h3>
+                    <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                      </svg>
+                      +91 {partner.phoneNumber || partner.kyc?.phone || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${partner.status === 'Approved'
+                  ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
+                  : partner.status === 'Rejected'
+                    ? 'bg-red-100 text-red-800 ring-1 ring-red-600/20'
+                    : 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/20'
+                  }`}>
+                  {partner.status === 'Approved' && (
+                    <svg className="mr-1 h-2 w-2 text-green-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                  )}
+                  {partner.status === 'Rejected' && (
+                    <svg className="mr-1 h-2 w-2 text-red-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                  )}
+                  {(!partner.status || partner.status === 'Pending') && (
+                    <svg className="mr-1 h-2 w-2 text-yellow-600" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                  )}
+                  {partner.status || "Pending"}
+                                        </span>
+              </div>
+            </div>
+
+            {/* Action Button */}
+            <div className="p-4">
+              <button
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm hover:from-blue-600 hover:to-blue-700 transition-all text-sm flex items-center justify-center gap-2"
+                onClick={() => handleExpand(partner._id)}
+              >
+                {expandedPartnerId === partner._id ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path>
+                    </svg>
+                    Hide Details
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                    View Details
+                  </>
+                )}
+              </button>
+                                  </div>
+
+            {/* Expanded Details - Mobile */}
+            {expandedPartnerId === partner._id && (
+              <div className="border-t border-gray-100 bg-gray-50 animate-slide-down">
+                <div className="p-4 space-y-4">
+                  {/* Status Actions */}
+                  {(!partner.status || partner.status === 'Pending') && (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        onClick={() => openApproveModal(partner._id)}
+                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => openRejectModal(partner._id)}
+                        className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Reject
+                      </button>
+                                </div>
+                  )}
+
+                  {/* Basic Info Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="bg-white p-3 rounded-lg">
+                      <span className="font-medium text-gray-600">Email:</span>
+                      <p className="text-gray-900 mt-1">{partner.email || 'N/A'}</p>
+                                </div>
+                    <div className="bg-white p-3 rounded-lg">
+                      <span className="font-medium text-gray-600">City:</span>
+                      <p className="text-gray-900 mt-1">{partner.city || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg">
+                      <span className="font-medium text-gray-600">State:</span>
+                      <p className="text-gray-900 mt-1">{partner.state || 'N/A'}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg">
+                      <span className="font-medium text-gray-600">Earning Preference:</span>
+                      <p className="text-gray-900 mt-1">{partner.earningPreference || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  {/* Expandable sections for full details */}
+                  <div className="space-y-2">
+                    <details className="bg-white rounded-lg border border-gray-200">
+                      <summary className="p-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-2">
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        Additional Information
+                      </summary>
+                      <div className="p-3 pt-0 space-y-3 text-sm">
+                        {/* Profile Pictures */}
+                        <div className="flex items-start gap-4">
+                          {partner.profilePicture && (
+                            <div className="text-center">
+                              <span className="font-medium text-gray-600 block mb-1">Profile Picture</span>
+                                      <img
+                                        src={partner.profilePicture}
+                                        alt="Profile"
+                                className="w-16 h-16 rounded-lg object-cover cursor-pointer border-2 border-gray-200"
+                                        onClick={() => {
+                                          setModalProfilePic(partner.profilePicture);
+                                          setShowProfilePicModal(true);
+                                        }}
+                                      />
+                            </div>
+                          )}
+                          {partner.earningPreference === 'video' && partner.capturedPhoto && (
+                            <div className="text-center">
+                              <span className="font-medium text-gray-600 block mb-1">Captured Image</span>
+                              <img
+                                src={partner.capturedPhoto}
+                                alt="Captured"
+                                className="w-16 h-16 rounded-lg object-cover cursor-pointer border-2 border-gray-200"
+                                onClick={() => {
+                                  setModalProfilePic(partner.capturedPhoto);
+                                  setShowProfilePicModal(true);
+                                }}
+                              />
+                                  </div>
+                          )}
+                                </div>
+
+                        {/* Bio */}
+                        {partner.bio && (
+                          <div>
+                            <span className="font-medium text-gray-600">Bio:</span>
+                            <p className="text-gray-900 mt-1 bg-gray-50 p-2 rounded">{partner.bio}</p>
+                                </div>
+                        )}
+
+                        {/* Languages */}
+                        {partner.languages && partner.languages.length > 0 && (
+                          <div>
+                            <span className="font-medium text-gray-600">Languages:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {partner.languages.map((lang, index) => (
+                                <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                                  {lang}
+                                    </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Hobbies */}
+                        {partner.hobbies && partner.hobbies.length > 0 && (
+                                    <div>
+                            <span className="font-medium text-gray-600">Hobbies:</span>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {partner.hobbies.map((hobby, index) => (
+                                <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                                  {hobby}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Audio/Video Introduction */}
+                        {partner.audioIntro && (
+                          <div>
+                            <span className="font-medium text-gray-600">
+                              {partner.earningPreference === 'video' ? 'Video Introduction:' : 'Audio Introduction:'}
+                            </span>
+                                      {partner.earningPreference === 'video' ? (
+                                        <video
+                                          controls
+                                          src={partner.audioIntro}
+                                className="mt-1 w-full max-w-xs h-32 rounded border"
+                                        />
+                                      ) : (
+                              <audio controls src={partner.audioIntro} className="mt-1 w-full" />
+                                      )}
+                                    </div>
+                        )}
+                                  </div>
+                    </details>
+
+                    <details className="bg-white rounded-lg border border-gray-200">
+                      <summary className="p-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-2">
+                        <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        PAN Details
+                      </summary>
+                      <div className="p-3 pt-0 space-y-2 text-sm">
+                        {partner.panDetails && Object.keys(partner.panDetails).length > 0 ? (
+                          Object.entries(partner.panDetails).map(([key, value]) => (
+                            key === "panCard" && value ? (
+                              <div key={key} className="flex items-center justify-between">
+                                <span className="font-medium text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <button
+                                  className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200 hover:bg-blue-100"
+                                  onClick={() => handleShowPanModal(value)}
+                                >
+                                  View Document
+                                </button>
+                              </div>
+                            ) : (
+                              <div key={key}>
+                                <span className="font-medium text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <p className="text-gray-900 mt-1">{String(value) || "N/A"}</p>
+                              </div>
+                            )
+                          ))
+                        ) : (
+                          <p className="text-gray-500 italic">No PAN details available</p>
+                                )}
+                              </div>
+                    </details>
+
+                    <details className="bg-white rounded-lg border border-gray-200">
+                      <summary className="p-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 rounded-lg flex items-center gap-2">
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                        </svg>
+                        Bank Details
+                      </summary>
+                      <div className="p-3 pt-0 space-y-2 text-sm">
+                        {partner.bankDetails && Object.keys(partner.bankDetails).length > 0 ? (
+                          Object.entries(partner.bankDetails).map(([key, value]) => (
+                            key === "cancelCheque" && value ? (
+                              <div key={key} className="flex items-center justify-between">
+                                <span className="font-medium text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <button
+                                  className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200 hover:bg-blue-100"
+                                  onClick={() => handleShowPanModal(value)}
+                                >
+                                  View Document
+                                </button>
+                            </div>
+                            ) : (
+                              <div key={key}>
+                                <span className="font-medium text-gray-600 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
+                                <p className="text-gray-900 mt-1">{String(value) || "N/A"}</p>
+                          </div>
+                            )
+                          ))
+                        ) : (
+                          <p className="text-gray-500 italic">No bank details available</p>
+                        )}
+                        </div>
+                    </details>
+                      </div>
+                </div>
+              </div>
+                )}
+          </div>
+            ))}
+
+        {filteredPartners.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl">
+            <div className="bg-blue-50 p-4 rounded-full mb-6">
+              {searchLoading ? (
+                <svg className="animate-spin w-16 h-16 text-blue-400" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              ) : (
+                <svg className="w-16 h-16 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              )}
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              {searchLoading ? "Searching..." : "No partners found"}
+            </h3>
+            <p className="text-gray-500 text-center max-w-md text-sm sm:text-base mb-4">
+              {search ? (
+                <>
+                  No partners found for "<strong>{search}</strong>" on page {currentPage}
+                  {Math.ceil(totalPartners / partnersPerPage) > 1 && (
+                    <span className="block mt-2">
+                      Try searching on other pages or modify your search terms
+                    </span>
+                  )}
+                </>
+              ) : (
+                "There are no partners in the system yet"
+              )}
+            </p>
+            {search && (
+              <div className="flex flex-col gap-2 items-center w-full max-w-sm">
               <button
                 onClick={() => setSearch("")}
-                className="mt-4 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="w-full px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors text-sm"
               >
                 Clear search
+                </button>
+                {Math.ceil(totalPartners / partnersPerPage) > 1 && (
+                  <div className="flex gap-2 w-full">
+                    {currentPage > 1 && (
+                      <button
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        className="flex-1 px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-xs"
+                      >
+                        ← Page {currentPage - 1}
+                      </button>
+                    )}
+                    {currentPage < Math.ceil(totalPartners / partnersPerPage) && (
+                      <button
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        className="flex-1 px-3 py-2 bg-gray-50 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-xs"
+                      >
+                        Page {currentPage + 1} →
               </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
 
       {/* Pagination */}
-      <div className="mt-6">
-        <nav className="flex justify-between items-center">
-          <div className="text-sm text-gray-500">
+      {!isSearchActive && (
+        <div className="mt-4 sm:mt-6">
+          <nav className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
             Showing{" "}
             <span className="font-medium text-gray-700">
               {partners.length > 0 ? (currentPage - 1) * partnersPerPage + 1 : 0}
@@ -1360,35 +2018,36 @@ export default function PartnersPage() {
             of{" "}
             <span className="font-medium text-gray-700">{totalPartners}</span> partners
           </div>
-          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+                className="px-2 sm:px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400 text-xs sm:text-sm"
             >
-              Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
             </button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.ceil(totalPartners / partnersPerPage) }, (_, i) => i + 1)
                 .filter(page => {
                   // Show first page, last page, current page, and pages around current page
-                  return page === 1 || 
-                         page === Math.ceil(totalPartners / partnersPerPage) ||
-                         Math.abs(page - currentPage) <= 1;
+                  return page === 1 ||
+                    page === Math.ceil(totalPartners / partnersPerPage) ||
+                    Math.abs(page - currentPage) <= 1;
                 })
+                  .slice(0, 7) // Show up to 7 pages
                 .map((page, index, array) => {
                   // Add ellipsis if there's a gap
                   if (index > 0 && page - array[index - 1] > 1) {
                     return (
                       <Fragment key={`ellipsis-${page}`}>
-                        <span className="px-2">...</span>
+                          <span className="px-1 sm:px-2 text-xs sm:text-sm">...</span>
                         <button
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded-lg ${
-                            currentPage === page
+                            className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm min-w-[32px] ${currentPage === page
                               ? "bg-blue-600 text-white"
                               : "bg-white text-blue-700 border border-gray-200 hover:bg-blue-50"
-                          }`}
+                            }`}
                         >
                           {page}
                         </button>
@@ -1399,11 +2058,10 @@ export default function PartnersPage() {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`px-3 py-1 rounded-lg ${
-                        currentPage === page
+                        className={`px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm min-w-[32px] ${currentPage === page
                           ? "bg-blue-600 text-white"
                           : "bg-white text-blue-700 border border-gray-200 hover:bg-blue-50"
-                      }`}
+                        }`}
                     >
                       {page}
                     </button>
@@ -1413,22 +2071,34 @@ export default function PartnersPage() {
             <button
               onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(totalPartners / partnersPerPage)))}
               disabled={currentPage >= Math.ceil(totalPartners / partnersPerPage)}
-              className="px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400"
+                className="px-2 sm:px-3 py-1 bg-white text-blue-700 border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:bg-gray-50 disabled:text-gray-400 text-xs sm:text-sm"
             >
               Next
             </button>
           </div>
         </nav>
       </div>
+      )}
+      
+      {/* Search Results Summary */}
+      {isSearchActive && (
+        <div className="mt-4 sm:mt-6 text-center">
+          <div className="text-xs sm:text-sm text-gray-500">
+            Showing{" "}
+            <span className="font-medium text-gray-700">{displayedPartners.length}</span>{" "}
+            search results (all matching partners displayed)
+          </div>
+        </div>
+      )}
 
       {/* Approval Modal */}
       {showApproveModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="bg-green-50 px-6 py-4 border-b border-green-100">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-green-50 px-4 sm:px-6 py-4 border-b border-green-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-green-800 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h3 className="text-base sm:text-lg font-semibold text-green-800 flex items-center gap-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   Approve Partner
@@ -1437,14 +2107,14 @@ export default function PartnersPage() {
                   onClick={() => setShowApproveModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
                 </button>
               </div>
             </div>
-            <div className="px-6 py-4">
-              <p className="text-gray-700 mb-4">
+            <div className="px-4 sm:px-6 py-4">
+              <p className="text-gray-700 mb-4 text-sm sm:text-base">
                 You're about to approve this partner. You can add an optional note that will be saved with this approval.
               </p>
               <div className="mb-4">
@@ -1455,12 +2125,12 @@ export default function PartnersPage() {
                   value={actionNote}
                   onChange={(e) => setActionNote(e.target.value)}
                   placeholder="Enter any notes about this approval..."
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-colors"
                   rows={3}
                 />
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-4 bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => setShowApproveModal(false)}
                 className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -1483,12 +2153,12 @@ export default function PartnersPage() {
 
       {/* Rejection Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="bg-red-50 px-6 py-4 border-b border-red-100">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-red-50 px-4 sm:px-6 py-4 border-b border-red-100">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <h3 className="text-base sm:text-lg font-semibold text-red-800 flex items-center gap-2">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                   Reject Partner
@@ -1497,14 +2167,14 @@ export default function PartnersPage() {
                   onClick={() => setShowRejectModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                   </svg>
                 </button>
               </div>
             </div>
-            <div className="px-6 py-4">
-              <p className="text-gray-700 mb-4">
+            <div className="px-4 sm:px-6 py-4">
+              <p className="text-gray-700 mb-4 text-sm sm:text-base">
                 Please provide a reason for rejecting this partner. This information will be saved with the rejection.
               </p>
               <div className="mb-4">
@@ -1515,22 +2185,22 @@ export default function PartnersPage() {
                   value={actionNote}
                   onChange={(e) => setActionNote(e.target.value)}
                   placeholder="Enter reason for rejection..."
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-colors"
+                  className="w-full border border-gray-300 rounded-lg px-3 sm:px-4 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-colors"
                   rows={3}
                   required
                 />
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3">
+            <div className="px-4 sm:px-6 py-4 bg-gray-50 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
               <button
                 onClick={() => setShowRejectModal(false)}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleRejectPartner}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                 disabled={!actionNote.trim()}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1546,24 +2216,24 @@ export default function PartnersPage() {
       {/* PAN Card Modal */}
       {showPanModal && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-semibold text-lg">Document Viewer</h3>
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b flex-shrink-0">
+              <h3 className="font-semibold text-base sm:text-lg">Document Viewer</h3>
               <button
                 className="text-gray-500 hover:text-gray-700 transition-colors"
                 onClick={handleClosePanModal}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
             </div>
-            <div className="bg-gray-100 p-4 flex items-center justify-center">
-              <img src={modalPanCard} alt="Document" className="max-w-full max-h-[70vh] object-contain" />
+            <div className="bg-gray-100 p-2 sm:p-4 flex items-center justify-center flex-1 overflow-hidden">
+              <img src={modalPanCard} alt="Document" className="max-w-full max-h-full object-contain" />
             </div>
-            <div className="p-4 flex justify-end">
+            <div className="p-3 sm:p-4 flex justify-end flex-shrink-0">
               <button
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-3 sm:px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
                 onClick={handleClosePanModal}
               >
                 Close
@@ -1575,15 +2245,15 @@ export default function PartnersPage() {
 
       {/* Profile Picture Modal */}
       {showProfilePicModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200] animate-fade-in" onClick={() => setShowProfilePicModal(false)}>
-          <div className="bg-white rounded-xl shadow-2xl p-4 max-w-2xl w-full flex flex-col items-center relative animate-zoom-in" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[200] animate-fade-in p-4" onClick={() => setShowProfilePicModal(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-3 sm:p-4 max-w-2xl w-full flex flex-col items-center relative animate-zoom-in max-h-[90vh]" onClick={e => e.stopPropagation()}>
             <button
-              className="absolute top-2 right-2 text-gray-500 hover:text-black text-2xl"
+              className="absolute top-2 right-2 text-gray-500 hover:text-black text-xl sm:text-2xl z-10"
               onClick={() => setShowProfilePicModal(false)}
             >
               &times;
             </button>
-            <img src={modalProfilePic} alt="Profile Zoomed" className="max-w-full max-h-[70vh] rounded-xl transition-all" />
+            <img src={modalProfilePic} alt="Profile Zoomed" className="max-w-full max-h-[80vh] rounded-xl transition-all object-contain" />
           </div>
         </div>
       )}
@@ -1603,6 +2273,22 @@ export default function PartnersPage() {
         }
         .animate-zoom-in {
           animation: zoom-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slide-down {
+          from { 
+            opacity: 0; 
+            transform: translateY(-10px); 
+            max-height: 0;
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+            max-height: 1000px;
+          }
+        }
+        .animate-slide-down {
+          animation: slide-down 0.3s ease-out;
         }
         
         /* Custom Scrollbar Styles */

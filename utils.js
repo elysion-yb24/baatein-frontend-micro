@@ -1,7 +1,7 @@
 import Cookies from "universal-cookie";
 import imageCompression from 'browser-image-compression';
 const API_URL = process.env.NEXT_PUBLIC_API_URL
-const GOOGLE_OAUTH_API_URL=process.env.NEXT_PUBLIC_GOOGLE_OAUTH_API_URL
+const GOOGLE_OAUTH_API_URL = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_API_URL
 export const buildQuery = (obj) => {
     return new URLSearchParams(obj).toString();
 }
@@ -112,7 +112,7 @@ export const getNormalUsers = async (endpoint, access_token, refresh_token) => {
 }
 
 
-export const userOnboardingApi = async (endpoint, formData,access_token) => {
+export const userOnboardingApi = async (endpoint, formData, access_token) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
@@ -121,7 +121,7 @@ export const userOnboardingApi = async (endpoint, formData,access_token) => {
             headers: {
                 // 'Content-Type': 'application/json',
                 // 'cookies':refresh_token || '',
-                'Authorization':'Bearer '+ access_token,
+                'Authorization': 'Bearer ' + access_token,
             },
         })
         updateAccessToken(apiResponse)
@@ -129,11 +129,11 @@ export const userOnboardingApi = async (endpoint, formData,access_token) => {
         return apiData;
     } catch (err) {
         console.error('Err in justCheck', err)
-        return { data: null, success: false, message: 'Internal Server Error'+err }
+        return { data: null, success: false, message: 'Internal Server Error' + err }
     }
 }
 
-export const getUserProfile = async (endpoint, access_token,refresh_token) => {
+export const getUserProfile = async (endpoint, access_token, refresh_token) => {
     // console.log(access_token,refresh_token)
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
@@ -173,7 +173,7 @@ export const getAdminUsers = async (endpoint, access_token, refresh_token) => {
     }
 }
 
-export const googleOauthLogin = async (tokenResponse,endpoint) => {
+export const googleOauthLogin = async (tokenResponse, endpoint) => {
     // fetching userinfo from google api
     try {
         const userResponse = await fetch(GOOGLE_OAUTH_API_URL, {
@@ -181,7 +181,7 @@ export const googleOauthLogin = async (tokenResponse,endpoint) => {
         });
         const userInfo = await userResponse.json()
         const { email, name, sub, hd } = userInfo
-        const teamResponse = await fetch(`${API_URL}${endpoint}`,{
+        const teamResponse = await fetch(`${API_URL}${endpoint}`, {
             method: "POST",
             credentials: 'include',
             headers: {
@@ -216,7 +216,7 @@ export const getUserInterests = async (endpoint, access_token) => {
     }
 }
 
-export const getPartnerAnalytics=async(endpoint,access_token,refresh_token)=>{
+export const getPartnerAnalytics = async (endpoint, access_token, refresh_token) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
@@ -236,7 +236,7 @@ export const getPartnerAnalytics=async(endpoint,access_token,refresh_token)=>{
 }
 
 
-export const getPartnerCategoryList=async(endpoint,access_token,refresh_token)=>{
+export const getPartnerCategoryList = async (endpoint, access_token, refresh_token) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
@@ -245,7 +245,7 @@ export const getPartnerCategoryList=async(endpoint,access_token,refresh_token)=>
                 'Authorization': 'Bearer ' + access_token,
             },
         })
-        console.log('apiResponse',apiResponse);
+        console.log('apiResponse', apiResponse);
         updateAccessToken(apiResponse)
         const apiData = await apiResponse.json();
         return apiData
@@ -255,10 +255,10 @@ export const getPartnerCategoryList=async(endpoint,access_token,refresh_token)=>
     }
 }
 
-export const updatePartnerCategory=async(endpoint,access_token,body)=>{
+export const updatePartnerCategory = async (endpoint, access_token, body) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
-            method:'POST',
+            method: 'POST',
             credentials: 'include',
             body: JSON.stringify(body),
             headers: {
@@ -266,7 +266,7 @@ export const updatePartnerCategory=async(endpoint,access_token,body)=>{
                 'Authorization': 'Bearer ' + access_token,
             },
         })
-        console.log('apiresponse',apiResponse)
+        console.log('apiresponse', apiResponse)
         updateAccessToken(apiResponse)
         const apiData = await apiResponse.json();
         return apiData
@@ -276,7 +276,7 @@ export const updatePartnerCategory=async(endpoint,access_token,body)=>{
     }
 }
 
-export const getPartnerReviews=async(endpoint,access_token)=>{
+export const getPartnerReviews = async (endpoint, access_token) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
@@ -294,7 +294,7 @@ export const getPartnerReviews=async(endpoint,access_token)=>{
     }
 }
 
-export const getPaymentsList=async(endpoint,access_token,refresh_token)=>{
+export const getPaymentsList = async (endpoint, access_token, refresh_token) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
             credentials: 'include',
@@ -313,10 +313,10 @@ export const getPaymentsList=async(endpoint,access_token,refresh_token)=>{
     }
 }
 
-export const updateApproveorDecline=async(endpoint,access_token,body)=>{
+export const updateApproveorDecline = async (endpoint, access_token, body) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
-            method:'POST',
+            method: 'POST',
             credentials: 'include',
             body: JSON.stringify(body),
             headers: {
@@ -333,10 +333,10 @@ export const updateApproveorDecline=async(endpoint,access_token,body)=>{
     }
 }
 
-export const managePartnerPermissions=async(endpoint,access_token,body)=>{
+export const managePartnerPermissions = async (endpoint, access_token, body) => {
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
-            method:'POST',
+            method: 'POST',
             credentials: 'include',
             body: JSON.stringify(body),
             headers: {
@@ -353,27 +353,40 @@ export const managePartnerPermissions=async(endpoint,access_token,body)=>{
     }
 }
 
-export const post=async(endpoint,access_token,body,options)=>{
-    const isBlob = options && options.blob === true;
+export const post = async (endpoint, access_token, body, options = {}) => {
+    const isBlob = options.blob === true;
     try {
-        const apiResponse = await fetch(`${API_URL}${endpoint}`, {
-            method:'POST',
+        const isFormData = body instanceof FormData;
+        const headers = { 'Authorization': 'Bearer ' + access_token };
+
+        // Only set Content-Type if it's not FormData
+        if (!isFormData) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: 'POST',
             credentials: 'include',
-            body: JSON.stringify(body),
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + access_token,
-            },
-        })
-        updateAccessToken(apiResponse)
-        return isBlob ? await apiResponse.blob() : await apiResponse.json();
+            body: body
+                ? (isFormData ? body : JSON.stringify(body))
+                : null,
+            headers,
+        });
+
+        updateAccessToken(response);
+
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        return isBlob ? await response.blob() : await response.json();
+
     } catch (err) {
-        console.error('Err in '+ endpoint, err)
+        console.error('Err in ' + endpoint, err);
         return isBlob ? null : { data: null, success: false, message: 'Internal Server Error' };
     }
-}
+};
 
-export const get=async(endpoint,access_token,refresh_token,options)=>{
+
+export const get = async (endpoint, access_token, refresh_token, options) => {
     const isBlob = options ? options.blob === true : false;
     try {
         const apiResponse = await fetch(`${API_URL}${endpoint}`, {
@@ -392,19 +405,19 @@ export const get=async(endpoint,access_token,refresh_token,options)=>{
 }
 
 
-export const compressImage=async(file)=>{
-    const options= { 
+export const compressImage = async (file) => {
+    const options = {
         maxSizeMB: 0.5,
         useWebWorker: true,        // optional, use multi-thread web worker, fallback to run in main-thread (default: true)
         preserveExif: true,         // optional, use preserve Exif metadata for JPEG image e.g., Camera model, Focal length, etc (default: false)
         fileType: 'image/jpeg',     // optional, fileType override e.g., 'image/jpeg', 'image/png' (default: file.type)
         // alwaysKeepResolution: true  // optional, only reduce quality, always keep width and height (default: false)
-      }
-    try{
-        let result=await imageCompression(file,options);
+    }
+    try {
+        let result = await imageCompression(file, options);
         return result;
-    }catch(err){
-        console.error('Err in compressing image',err.message);
+    } catch (err) {
+        console.error('Err in compressing image', err.message);
         return null;
     }
 }

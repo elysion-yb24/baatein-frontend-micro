@@ -8,7 +8,7 @@ async function page() {
     return (
         <div>
             <ComponentGetPayout appPassword={APP_PASSWORD}/>
-            <ComponentUploadPayout/>
+            <ComponentUploadPayout appPassword={APP_PASSWORD}/>
         </div>
     );
 }

@@ -40,7 +40,7 @@ function ComponentUploadPayout({ appPassword }) {
             if (!file) throw new Error('Please select a file');
 
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('payoutFile', file);
 
             setLoading(true);
 
